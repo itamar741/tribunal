@@ -23,6 +23,7 @@ Completed and verified:
 - Supabase PostgreSQL TLS with official CA and certificate verification enabled (`certs/prod-ca-2021.crt`).
 - Settled advocate and judge response-contract logical shapes and runtime prompt-composition design (`docs/architecture.md`).
 - Runtime Zod validators under `lib/ai/contracts/` for advocate and judge responses (trimmed non-empty strings; extra fields forbidden).
+- Settled retry/failure policy (`docs/architecture.md`): at most two attempts per agent; independent run failure; no majority from incomplete stages. Runtime retry is not implemented yet.
 
 Not implemented:
 
@@ -272,7 +273,7 @@ Judges, majority calculation, second-run coordination, and results UI.
 
 ### Dependencies / blockers
 
-Phase 4, designed advocate contract, advocate profiles/configurations, constructed prompts, and a retry/attempt policy settled before this multi-agent stage.
+Phase 4, designed advocate contract, advocate profiles/configurations, constructed prompts, and the settled retry/attempt policy in `docs/architecture.md`.
 
 ## Phase 6 — Reusable engine: judges and majority
 
@@ -331,7 +332,7 @@ Single-run behavior and accounting are proven before coordinating fourteen basel
 - Add a Case execution service that invokes the same engine twice with configuration data.
 - Start `SAME_MODEL` and `MIXED_MODELS` concurrently.
 - Persist stage progress, outputs, majorities, failures, and timestamps incrementally.
-- Implement the bounded retry policy settled before this phase.
+- Implement the bounded retry policy documented in `docs/architecture.md`.
 - Record every retry as another real attempt with the next attempt number.
 - Preserve failed attempts and their usage/cost.
 - Protect against accidental duplicate execution/idempotency failures.
@@ -357,7 +358,7 @@ Case execution service, engine, run/output/audit repositories, accounting querie
 
 ### Dependencies / blockers
 
-Phase 6 and a settled retry/attempt policy (our design).
+Phase 6 and the settled retry/attempt policy in `docs/architecture.md`.
 
 ## Phase 8 — Execution trigger and result-query API
 
@@ -558,7 +559,6 @@ Phases 1–11, runtime contract implementation, instructor-supplied character/pr
 Internal design still required:
 
 - Concrete OpenRouter model IDs for `SAME_MODEL` and `MIXED_MODELS`
-- Retryable error classes, maximum attempts, backoff, and manual rerun behavior (must be settled before multi-agent execution)
 - Past-Case public-list/authentication/access policy and safe list metadata; retrieval by known unique ID is settled
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment topology
@@ -568,6 +568,7 @@ Settled:
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
 - Runtime prompt layer composition for advocates and judges
 - Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
+- Retry/failure policy (`docs/architecture.md`; runtime implementation deferred)
 
 Waiting on instructor input or an explicit recorded contract:
 

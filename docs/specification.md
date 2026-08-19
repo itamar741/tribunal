@@ -72,6 +72,7 @@ When the MVP is complete, the following must be observable:
 - Use PostgreSQL for the deployed application; Supabase is the preferred provider.
 - Use OpenRouter as the AI gateway and as the authoritative source of token/cost information.
 - Prefer failure visibility over silent fallback verdicts.
+- Bound each agent to at most two API attempts (one retry); do not fabricate a majority from incomplete stages; treat the two Tribunal Runs as independent. Canonical retry/failure policy: `docs/architecture.md`.
 
 ## 4. Validation approach
 
@@ -82,8 +83,9 @@ Validate against observable criteria:
 - **Contract:** advocate/judge responses fail closed when they do not match the settled central schemas in `docs/architecture.md`.
 - **Run integrity:** a run without successful contracted judge outputs does not present a successful majority verdict.
 - **Majority vote:** given three valid judge votes, the run verdict is `GUILTY` iff at least two are `GUILTY`, otherwise `NOT_GUILTY` when at least two are `NOT_GUILTY`. That verdict is the run’s final output.
-- **Audit:** every actual attempt has the complete required Case/run/stage/agent/attempt/model/token/cost/duration/outcome fields; retries remain separate records; usage/cost come from OpenRouter.
+- **Audit:** every actual attempt has the complete required Case/run/stage/agent/attempt/model/token/cost/duration/outcome fields; retries remain separate records; usage/cost come from OpenRouter; missing usage/cost is unknown/null, not zero.
 - **Accounting:** sums derived from call records reconcile at agent, stage, run, and Case levels, including failed attempts that incurred usage.
+- **Retries:** each agent has at most two attempts; 401/403 and other permanent failures are not retried; a failed advocate stage blocks judges; a failed judge stage yields no majority; `SAME_MODEL` and `MIXED_MODELS` fail independently.
 - **Retrieval:** a persisted Case can be loaded by unique Case ID without creating new model calls.
 - **Runs:** every Case has exactly two run records (`SAME_MODEL`, `MIXED_MODELS`); duplicate kinds are rejected; initialization is transactional.
 - **Regression:** changing model assignment config does not require duplicating tribunal workflow code.
@@ -98,6 +100,6 @@ Validate against observable criteria:
 | Model timeout | Missing agent output | Record failure; do not treat as a valid contracted response |
 | Malformed model response | Output does not match central contract | Validation failure; never coerce into a valid verdict |
 | Partial Tribunal failure | Some agents succeed, others fail | Run must not silently produce a “successful” majority from incomplete/invalid data |
-| Retry causing uncontrolled extra model calls or cost | Repeated failures amplify spend and duplicate work | Retry policy must be explicit and bounded before multi-agent execution |
+| Retry causing uncontrolled extra model calls or cost | Repeated failures amplify spend and duplicate work | At most two attempts per agent; see `docs/architecture.md` |
 
 Do not invent the charge-sheet structural contract. Advocate and judge logical contracts are settled in `docs/architecture.md` and implemented as Zod schemas under `lib/ai/contracts/`.

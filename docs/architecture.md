@@ -327,7 +327,7 @@ Individual call records are the source of truth. Aggregates should normally be c
 - complete totals for each Tribunal Run;
 - complete totals for the Case across `SAME_MODEL` and `MIXED_MODELS`.
 
-OpenRouter-reported usage and cost are the source of truth for each attempt. The physical audit schema remains to be implemented.
+OpenRouter-reported usage and cost are the source of truth for each attempt. If OpenRouter does not provide usage/cost for a failed call, store the value as unknown/null rather than incorrectly recording zero. The physical audit schema remains to be implemented.
 
 ## Execution mechanism
 
@@ -339,11 +339,71 @@ Tribunal execution remains a modular server-side application service independent
 - Introduce additional background/job infrastructure only if those measurements show the simpler path cannot complete reliably.
 - Regardless of transport, idempotency and per-attempt auditing must prevent accidental duplicate calls and hidden cost.
 
-## Failure handling boundary
+## Failure handling and retry policy
 
-- Invalid uploads, processing failures, timeouts, malformed responses, and partial run failures must surface as failures.
-- They must **not** be coerced into successful majority verdicts.
-- Retry policy: **internal open decision** (our design; must be settled before multi-agent execution; must avoid uncontrolled extra calls/cost).
+Invalid uploads, processing failures, timeouts, malformed responses, and partial run failures must surface as failures. They must **not** be coerced into successful majority verdicts.
+
+Retry/attempt behavior is settled below. **Runtime retry is not implemented yet.**
+
+### Maximum attempts
+
+Each AI agent may make at most **2 attempts**: 1 initial attempt and 1 retry. Unbounded retries are forbidden.
+
+A normal Tribunal Run has 7 model calls. Theoretical maxima:
+
+- 14 API attempts per Tribunal Run
+- 28 API attempts per Case across both Tribunal Runs
+
+### Retryable failures
+
+Retry once for:
+
+- timeout;
+- transient network/connection failure;
+- HTTP 429 / provider rate limiting;
+- transient OpenRouter/provider 5xx failure;
+- malformed structured output;
+- valid JSON that fails the applicable Zod response contract;
+- incomplete/truncated response.
+
+For HTTP 429, respect `Retry-After` when OpenRouter provides it. For transient network/5xx failures, a short bounded delay is sufficient. For invalid model output, the retry may happen immediately.
+
+### Non-retryable failures
+
+Do not retry:
+
+- authentication/authorization failures such as 401/403;
+- invalid model/configuration;
+- invalid internal application configuration;
+- other failures known to be permanent rather than transient.
+
+### Retry invariants
+
+A retry must use the same Case, Tribunal Run, agent identity, role, side where applicable, profile, and model. Do not switch models on retry.
+
+For an invalid structured response, the retry prompt may state that the previous response failed the required output contract and must be returned in the exact required structure. It must not change the character/profile or the substantive task.
+
+### Stage failure
+
+A successful **advocate stage** requires all four advocates to produce valid contracted responses. If any advocate still fails after its second attempt: the advocate stage fails; judges do not start; that Tribunal Run becomes failed; no verdict is fabricated.
+
+A successful **judge stage** requires three valid judge responses. If any judge still fails after its second attempt: the judge stage fails; no majority is calculated; that Tribunal Run becomes failed. Do not calculate a majority from only two judges.
+
+### Independent Tribunal Runs
+
+`SAME_MODEL` and `MIXED_MODELS` fail independently. A valid result from one run remains available even if the other run fails. A Case does not require both runs to succeed in order to preserve a valid result from one run.
+
+### Audit and accounting for retries
+
+Every actual API attempt is a separate auditable Model Call. Retries are not hidden. All attempts, including failed attempts that consumed billable usage, contribute to agent, stage, Tribunal Run, and Case totals. Missing OpenRouter usage/cost is stored as unknown/null, not zero.
+
+### Timeout
+
+The initial MVP timeout is **90 seconds per individual API attempt**, not one timeout for the entire advocate or judge stage. It may become configurable later if measured behavior justifies it.
+
+### Manual reruns
+
+There is no manual rerun of an existing Tribunal Run in the MVP. Another complete execution requires uploading the charge sheet again, which creates a new Case with a new Case ID and two new Tribunal Runs. This preserves an immutable audit history.
 
 ## Project structure (foundation)
 
@@ -368,7 +428,6 @@ docs/                # Framing, architecture, specification
 Internal design still required:
 
 - Concrete OpenRouter model IDs for both run configurations
-- Retry/attempt policy (must be settled before multi-agent execution)
 - Past-case listing/authentication/access policy beyond retrieval by known Case ID
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment configuration
@@ -378,6 +437,7 @@ Settled:
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
 - Runtime prompt layer composition for advocates and judges
 - Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
+- Retry/failure policy (this document; runtime implementation deferred)
 
 Waiting on instructor input or an explicit recorded contract:
 
