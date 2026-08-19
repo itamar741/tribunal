@@ -1,13 +1,10 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
+import { DatabaseConfigError } from "./errors";
+import { createSslConfig } from "./ssl";
 
 let pool: Pool | undefined;
 
-export class DatabaseConfigError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "DatabaseConfigError";
-  }
-}
+export { DatabaseConfigError };
 
 function requireDatabaseUrl(): string {
   const url = process.env.DATABASE_URL;
@@ -21,8 +18,10 @@ function requireDatabaseUrl(): string {
 
 export function getPool(): Pool {
   if (!pool) {
+    const connectionString = requireDatabaseUrl();
     pool = new Pool({
-      connectionString: requireDatabaseUrl(),
+      connectionString,
+      ssl: createSslConfig(connectionString),
     });
   }
   return pool;

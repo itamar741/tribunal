@@ -13,4 +13,5 @@ export {
   withClient,
   withTransaction,
 } from "./client";
+export { inspectClientTls } from "./ssl";
 export { applyMigrations } from "./migrate";

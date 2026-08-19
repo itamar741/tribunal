@@ -8,6 +8,21 @@ Set a server-only `DATABASE_URL`. Copy `.env.example` to `.env.local` and fill i
 
 The application uses the `pg` driver from `lib/db`. Client components must not import that module.
 
+### TLS
+
+Supabase connections use encrypted transport with certificate verification (`verify-full` equivalent):
+
+- TLS is enabled in the `pg` pool `ssl` object, not via `sslmode` on `DATABASE_URL`.
+- The official CA is `certs/prod-ca-2021.crt` (`prod-ca-2021.crt` from Database Settings → SSL Configuration).
+- `rejectUnauthorized` remains `true`. Hostname verification uses the Node TLS default.
+- Override the CA path with `DATABASE_SSL_CA` if you download a newer certificate from the dashboard.
+
+Do not add `sslmode`, `sslrootcert`, `sslcert`, or `sslkey` to `DATABASE_URL`. node-postgres replaces the `ssl` object when those URI parameters are present.
+
+Local non-Supabase Postgres URLs do not force TLS unless `DATABASE_SSL_CA` is set.
+
+`pg_stat_ssl` reports the pooler’s backend session to Postgres, not the client-to-pooler socket. For the shared transaction pooler that view can show `ssl = false` even when the client connection is TLS. Confirm client TLS from the Node `TLSSocket` (`encrypted` and `authorized`).
+
 ## Migrations
 
 SQL files live in `supabase/migrations/` and are named:

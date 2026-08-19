@@ -7,7 +7,9 @@ import { TribunalRunKind } from "../ai/configurations";
 import {
   applyMigrations,
   closePool,
+  inspectClientTls,
   query,
+  withClient,
   withTransaction,
 } from "../db";
 import { PostgresCaseRepository } from "./postgres-repository";
@@ -60,6 +62,13 @@ describe("PostgresCaseRepository run invariants", {
       [`${TEST_FILE_PREFIX}%`],
     );
     await closePool();
+  });
+
+  it("connects over verified TLS to the configured database", async () => {
+    const tls = await withClient(async (client) => inspectClientTls(client));
+    assert.equal(tls.encrypted, true);
+    assert.equal(tls.authorized, true);
+    assert.ok(tls.protocol);
   });
 
   it("creates a Case with exactly two distinct run kinds atomically", async () => {
