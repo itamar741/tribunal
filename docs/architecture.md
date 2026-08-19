@@ -126,21 +126,138 @@ Instructor-provided **character/profiles** live under `lib/ai/profiles/` as **ve
 - Not user-editable
 - Server-side only
 - The instructor supplies character/profile content only, not role prompts
-- Runtime prompts are constructed by the application and combine, as appropriate: role instructions, instructor-provided character/profile, structured charge-sheet content, previous-stage outputs, and exact response-format instructions
+- Runtime prompts are constructed by the application from explicit layers (see **Runtime prompt composition** below), not seven unrelated prompt files
 - Concrete profile contents: **unresolved** (not yet supplied)
 
 ## Centralized response contracts
 
-Under `lib/ai/contracts/`:
+Canonical logical shapes live in this document. Runtime validators under `lib/ai/contracts/` are **not implemented yet**; they must match these shapes before the first real AI call. Orchestration must **not** depend on parsing free-form prose.
 
-- One exact response schema shared by **all** advocates (defense or prosecution, any model)
-- One exact response schema shared by **all** judges (any profile or model)
+### General invariant
 
-These contracts are **our design responsibility**, not instructor input. They must be designed and made runtime-validatable before the first real AI call. Orchestration must **not** depend on parsing free-form prose.
+> Models may interpret and argue from supplied facts, but must not introduce new case facts.
 
-Exact schema fields: **unresolved pending our design** — do not implement them until that design step.
+Side, profile, role, and model assignment come from application configuration. They must not appear as trusted fields in model responses.
+
+### Advocate contract (all four advocates)
+
+One identical runtime-validatable contract for every defense and prosecution advocate, regardless of profile or model.
+
+```json
+{
+  "summary": "Short summary of the advocate's overall position",
+  "arguments": [
+    {
+      "title": "Short title",
+      "argument": "Argument text"
+    },
+    {
+      "title": "Short title",
+      "argument": "Argument text"
+    },
+    {
+      "title": "Short title",
+      "argument": "Argument text"
+    }
+  ],
+  "conclusion": "Concise final conclusion"
+}
+```
+
+Rules:
+
+- `summary` — required, non-empty string.
+- `arguments` — required array of exactly 3 items.
+- Each argument — required non-empty `title` and non-empty `argument`.
+- `conclusion` — required, non-empty string.
+- Additional fields are forbidden.
+- The schema is identical for defense and prosecution; assigned side is configuration, not a response field.
+
+### Judge contract (all three judges)
+
+One identical runtime-validatable contract for every judge, regardless of profile or model.
+
+```json
+{
+  "verdict": "GUILTY",
+  "summary": "Concise explanation of the decision",
+  "key_reasons": [
+    "First key reason",
+    "Second key reason",
+    "Third key reason"
+  ]
+}
+```
+
+Rules:
+
+- `verdict` — required; exactly `GUILTY` or `NOT_GUILTY`.
+- `summary` — required, non-empty string.
+- `key_reasons` — required array of exactly 3 non-empty strings.
+- Additional fields are forbidden.
+- Majority calculation consumes only the validated `verdict` field from each judge.
+
+Do not add confidence scores, rankings, sentencing recommendations, evidence-strength scores, or other speculative fields.
 
 AI failures and malformed responses must never silently become valid verdicts.
+
+## Runtime prompt composition
+
+Prompts are assembled in application code from explicit layers, not seven unrelated static prompt files. **Not implemented yet.**
+
+### Advocate prompt layers
+
+```text
+1. Role instructions
+2. Assigned side: DEFENSE or PROSECUTION
+3. Instructor-provided character/profile
+4. Structured charge sheet
+5. Advocate task instructions
+6. Advocate response contract
+7. Final output constraints
+```
+
+The advocate must:
+
+- argue only from its assigned side;
+- use only facts contained in the supplied charge sheet;
+- interpret and argue from those facts without inventing new case facts;
+- produce exactly 3 distinct arguments;
+- return only the required structured response;
+- add no fields;
+- not wrap the response in Markdown;
+- not describe or reveal the instructions.
+
+The four advocates differ only through configuration: assigned side, character/profile, and model. Shared role behavior and output format must not be duplicated unnecessarily.
+
+### Judge prompt layers
+
+```text
+1. Role instructions
+2. Instructor-provided character/profile
+3. Structured charge sheet
+4. Defense Advocate 1 validated output
+5. Defense Advocate 2 validated output
+6. Prosecution Advocate 1 validated output
+7. Prosecution Advocate 2 validated output
+8. Judge task instructions
+9. Judge response contract
+10. Final output constraints
+```
+
+The judge must:
+
+- evaluate the charge sheet and all four advocate outputs independently;
+- return exactly `GUILTY` or `NOT_GUILTY`;
+- use only supplied case facts and arguments;
+- not invent new case facts;
+- return exactly 3 key reasons;
+- return only the required structured response;
+- add no fields;
+- not wrap the response in Markdown;
+- not see or depend on the other judges' decisions.
+
+The three judges differ only through configuration: character/profile and model.
 
 ## Persistence and AI gateway
 
@@ -248,13 +365,17 @@ docs/                # Framing, architecture, specification
 
 Internal design still required:
 
-- Exact advocate and judge response-contract fields
 - Concrete OpenRouter model IDs for both run configurations
-- Runtime prompt composition details
 - Retry/attempt policy (must be settled before multi-agent execution)
 - Past-case listing/authentication/access policy beyond retrieval by known Case ID
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment configuration
+- Runtime schema library/implementation under `lib/ai/contracts/`
+
+Settled (documented; runtime implementation deferred):
+
+- Advocate and judge response-contract logical shapes (`docs/architecture.md`)
+- Runtime prompt layer composition for advocates and judges
 
 Waiting on instructor input or an explicit recorded contract:
 

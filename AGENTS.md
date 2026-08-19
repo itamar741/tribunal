@@ -20,7 +20,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Use version-controlled SQL migrations and server-side PostgreSQL (`pg`); do not introduce an ORM without an explicit requirement.
 - Do not expose server secrets, prompts, profiles, or API keys to the client.
 - Keep instructor-provided character/profiles version-controlled under `lib/ai/profiles/`; construct runtime prompts in application code.
-- Keep advocate and judge response contracts centralized under `lib/ai/contracts/`; design them as an explicit step before the first AI call; validate at runtime; do not parse free-form prose for orchestration.
+- Keep advocate and judge response contracts centralized under `lib/ai/contracts/`; the settled logical shapes are documented in `docs/architecture.md`; implement runtime validators there before the first AI call; do not parse free-form prose for orchestration.
+- Models may interpret and argue from supplied charge-sheet facts and prior validated outputs, but must not introduce new case facts.
+- Side, profile, role, and model are application configuration; do not trust them as model-returned fields.
+- Construct runtime prompts in application code from explicit layers (role, side/profile, charge sheet, prior outputs, contract, constraints); do not maintain seven unrelated prompt files.
 - Do not invent the charge-sheet structural contract or missing instructor-provided profiles.
 - Do not expand MVP scope without an explicit requirement.
 - Prefer failure visibility; AI failures must never silently become valid verdicts.

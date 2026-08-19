@@ -67,7 +67,8 @@ When the MVP is complete, the following must be observable:
 - Treat each model API attempt as an immutable audit/accounting event; record OpenRouter-reported usage/cost; calculate aggregate totals from those records rather than unnecessarily duplicating stored totals.
 - Preserve a modular Tribunal execution service and begin with the simplest reliable Next.js-compatible execution path; add queue/background-job infrastructure only if measured runtime/deployment limits require it.
 - Keep instructor-provided character/profiles version-controlled and server-side; construct runtime prompts in application code.
-- Keep advocate and judge response contracts centralized; design and validate them at runtime; do not parse free-form prose for orchestration.
+- Keep advocate and judge response contracts centralized; the settled logical shapes are in `docs/architecture.md`; implement and validate at runtime before the first AI call; do not parse free-form prose for orchestration.
+- Models may interpret and argue from supplied facts but must not introduce new case facts.
 - Use PostgreSQL for the deployed application; Supabase is the preferred provider.
 - Use OpenRouter as the AI gateway and as the authoritative source of token/cost information.
 - Prefer failure visibility over silent fallback verdicts.
@@ -78,7 +79,7 @@ Validate against observable criteria:
 
 - **Upload:** missing file, non-`.md` (including `.txt`), empty, whitespace-only, over 1 MB, and malformed UTF-8 charge sheets are rejected; valid `.md` creates a unique Case with structured success feedback.
 - **Manual:** upload path is clear; both run majority verdicts are reviewable when implemented.
-- **Contract:** advocate/judge responses fail closed when they do not match the central schemas (once designed).
+- **Contract:** advocate/judge responses fail closed when they do not match the settled central schemas in `docs/architecture.md`.
 - **Run integrity:** a run without successful contracted judge outputs does not present a successful majority verdict.
 - **Majority vote:** given three valid judge votes, the run verdict is `GUILTY` iff at least two are `GUILTY`, otherwise `NOT_GUILTY` when at least two are `NOT_GUILTY`. That verdict is the run’s final output.
 - **Audit:** every actual attempt has the complete required Case/run/stage/agent/attempt/model/token/cost/duration/outcome fields; retries remain separate records; usage/cost come from OpenRouter.
@@ -99,4 +100,4 @@ Validate against observable criteria:
 | Partial Tribunal failure | Some agents succeed, others fail | Run must not silently produce a “successful” majority from incomplete/invalid data |
 | Retry causing uncontrolled extra model calls or cost | Repeated failures amplify spend and duplicate work | Retry policy must be explicit and bounded before multi-agent execution |
 
-Do not invent the charge-sheet structural contract. Advocate and judge response contracts are a required design step before the first real AI call.
+Do not invent the charge-sheet structural contract. Advocate and judge logical contracts are settled in `docs/architecture.md`; runtime validators under `lib/ai/contracts/` remain future work.

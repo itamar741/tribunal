@@ -18,13 +18,15 @@ Completed and verified:
 - Case retrieval by unique ID without returning full Markdown text to the browser.
 - Every Case has exactly two Tribunal Run records (`SAME_MODEL` and `MIXED_MODELS`), created atomically with the Case and backfilled for existing Cases.
 - Newly created runs are `PENDING` (no AI execution yet). Unique `(case_id, run_type)` is enforced in PostgreSQL.
-- Focused upload-validation and Case-persistence tests and `test`, `lint`, `typecheck`, `build`, and `migrate` scripts.
+- Focused upload-validation, Case-persistence, and Tribunal Run tests; `test`, `lint`, `typecheck`, `build`, and `migrate` scripts.
 - Settled `SAME_MODEL` and `MIXED_MODELS` run-kind constants.
+- Supabase PostgreSQL TLS with official CA and certificate verification enabled (`certs/prod-ca-2021.crt`).
+- Settled advocate and judge response-contract logical shapes and runtime prompt-composition design (`docs/architecture.md`).
 
 Not implemented:
 
 - AI execution against Tribunal Runs.
-- Concrete AI response contracts (to be designed), instructor character/profiles, and runtime prompts.
+- Runtime schema validators under `lib/ai/contracts/`, prompt builders, instructor character/profiles, and model configuration.
 - OpenRouter integration.
 - Model-call audit/accounting records.
 - Tribunal orchestration, result UI, past-Case listing, and deployment.
@@ -33,7 +35,7 @@ Not implemented:
 
 1. Persist and retrieve a unique Case for every accepted upload.
 2. Add two durable Tribunal Run records and lifecycle state per Case.
-3. Design response contracts; encode profiles, prompts, and model configurations.
+3. Implement runtime contracts, encode profiles, build prompts, and complete model configuration.
 4. Prove one audited OpenRouter advocate call end-to-end.
 5. Add the four-advocate parallel stage to the reusable engine.
 6. Add the three-judge stage and settled majority calculation.
@@ -130,27 +132,26 @@ Database migrations/repositories, Case application services, and existing `lib/a
 
 Phase 1. Exact model assignments are not needed yet.
 
-## Phase 3 — Response contracts, profiles, prompts, and model configuration
+## Phase 3 — Runtime contracts, profiles, prompts, and model configuration
 
 ### Goal
 
-Design the two centralized runtime-validatable AI response contracts, encode instructor-provided character/profiles, construct runtime prompts, and complete configuration-only model assignment.
+Implement the settled runtime-validatable AI response contracts, encode instructor-provided character/profiles, build layered runtime prompts, and complete configuration-only model assignment.
 
 ### Why this phase comes now
 
-No real AI call or orchestration should proceed without exact, reusable contracts. Contract design is an explicit step **before** the first OpenRouter call.
+No real AI call or orchestration should proceed without runtime validators matching the settled logical contracts. The shapes and prompt architecture are documented; this phase implements them.
 
 ### Scope
 
-- Design one exact runtime-validatable advocate schema shared by all four advocates, regardless of profile or model.
-- Design one exact runtime-validatable judge schema shared by all three judges, regardless of profile or model.
-- Keep TypeScript types aligned with those runtime validators under `lib/ai/contracts`.
+- Implement runtime validators under `lib/ai/contracts/` matching the advocate and judge logical shapes in `docs/architecture.md`.
+- Keep TypeScript types aligned with those runtime validators.
 - Encode instructor-provided character/profiles under `lib/ai/profiles` as hard-coded, server-only, version-controlled application code.
 - Define stable identities for two defense advocates, two prosecution advocates, and three judges.
-- Construct runtime prompts in application code. Combine, as appropriate: role instructions, instructor-provided character/profile, structured charge-sheet content, previous-stage outputs, and exact response-format instructions.
+- Build runtime prompts in application code from the settled layer model (advocate and judge compositions in `docs/architecture.md`).
 - Choose concrete OpenRouter models ourselves: one model for all seven agents in `SAME_MODEL`; seven different models in `MIXED_MODELS`.
 - Keep model assignment in configuration, not orchestration branches.
-- Test schema acceptance/rejection with designed valid and invalid examples.
+- Test schema acceptance/rejection with valid and invalid examples.
 - Test that `SAME_MODEL` assigns one model to all seven agents and `MIXED_MODELS` assigns seven distinct models.
 
 ### Explicitly out of scope
@@ -163,15 +164,17 @@ Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, prompt-
 
 ### Verification gate
 
-- Designed contracts exist as runtime validators; valid examples pass and malformed/missing/extra fields fail.
+- Runtime validators exist; valid examples pass and malformed/missing/extra fields fail.
 - Every advocate uses the same advocate contract and every judge uses the same judge contract.
+- Prompts are assembled from explicit layers, not seven unrelated static files.
 - Configuration, not orchestration branching, accounts for run differences.
 - Profiles, prompts, and configuration remain absent from client bundles.
 
 ### Dependencies / blockers
 
-- Response-contract design, prompt construction, and model selection are our responsibility and are not blocked on instructor schema/prompt/model lists.
+- Logical contract shapes and prompt composition are settled in documentation.
 - Encoding the seven character/profiles is blocked until the instructor supplies those profiles.
+- Model selection is deferred to this phase but not yet chosen.
 - Prompt composition may use raw validated Markdown until the charge-sheet structural contract is recorded; do not invent that structure.
 
 ## Phase 4 — Audited OpenRouter one-agent vertical slice
@@ -547,19 +550,23 @@ The MVP Completion Gate below passes in a production-like environment, along wit
 
 ### Dependencies / blockers
 
-Phases 1–11, designed contracts/models/prompts, instructor-supplied character/profiles, and provider credentials.
+Phases 1–11, runtime contract implementation, instructor-supplied character/profiles, and provider credentials.
 
 ## Open Decisions
 
 Internal design still required:
 
-- Exact advocate and judge response-contract fields
 - Concrete OpenRouter model IDs for `SAME_MODEL` and `MIXED_MODELS`
-- Runtime prompt composition details
 - Retryable error classes, maximum attempts, backoff, and manual rerun behavior (must be settled before multi-agent execution)
 - Past-Case public-list/authentication/access policy and safe list metadata; retrieval by known unique ID is settled
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment topology
+- Runtime schema library/implementation under `lib/ai/contracts/`
+
+Settled in documentation (runtime implementation deferred to Phase 3):
+
+- Advocate and judge response-contract logical shapes (`docs/architecture.md`)
+- Runtime prompt layer composition for advocates and judges
 
 Waiting on instructor input or an explicit recorded contract:
 
