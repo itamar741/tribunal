@@ -131,7 +131,9 @@ Instructor-provided **character/profiles** live under `lib/ai/profiles/` as **ve
 
 ## Centralized response contracts
 
-Canonical logical shapes live in this document. Runtime validators under `lib/ai/contracts/` are **not implemented yet**; they must match these shapes before the first real AI call. Orchestration must **not** depend on parsing free-form prose.
+Canonical logical shapes live in this document. Runtime validators under `lib/ai/contracts/` are Zod schemas that match these shapes; they must be used before the first real AI call. Orchestration must **not** depend on parsing free-form prose.
+
+Contract string fields are valid only when non-empty **after trimming surrounding whitespace**. Whitespace-only strings are invalid. Validators must not coerce invalid values into valid ones.
 
 ### General invariant
 
@@ -166,10 +168,10 @@ One identical runtime-validatable contract for every defense and prosecution adv
 
 Rules:
 
-- `summary` — required, non-empty string.
+- `summary` — required, trimmed non-empty string.
 - `arguments` — required array of exactly 3 items.
-- Each argument — required non-empty `title` and non-empty `argument`.
-- `conclusion` — required, non-empty string.
+- Each argument — required trimmed non-empty `title` and trimmed non-empty `argument`.
+- `conclusion` — required, trimmed non-empty string.
 - Additional fields are forbidden.
 - The schema is identical for defense and prosecution; assigned side is configuration, not a response field.
 
@@ -192,8 +194,8 @@ One identical runtime-validatable contract for every judge, regardless of profil
 Rules:
 
 - `verdict` — required; exactly `GUILTY` or `NOT_GUILTY`.
-- `summary` — required, non-empty string.
-- `key_reasons` — required array of exactly 3 non-empty strings.
+- `summary` — required, trimmed non-empty string.
+- `key_reasons` — required array of exactly 3 trimmed non-empty strings.
 - Additional fields are forbidden.
 - Majority calculation consumes only the validated `verdict` field from each judge.
 
@@ -370,12 +372,12 @@ Internal design still required:
 - Past-case listing/authentication/access policy beyond retrieval by known Case ID
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment configuration
-- Runtime schema library/implementation under `lib/ai/contracts/`
 
-Settled (documented; runtime implementation deferred):
+Settled:
 
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
 - Runtime prompt layer composition for advocates and judges
+- Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
 
 Waiting on instructor input or an explicit recorded contract:
 

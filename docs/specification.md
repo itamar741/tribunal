@@ -67,7 +67,7 @@ When the MVP is complete, the following must be observable:
 - Treat each model API attempt as an immutable audit/accounting event; record OpenRouter-reported usage/cost; calculate aggregate totals from those records rather than unnecessarily duplicating stored totals.
 - Preserve a modular Tribunal execution service and begin with the simplest reliable Next.js-compatible execution path; add queue/background-job infrastructure only if measured runtime/deployment limits require it.
 - Keep instructor-provided character/profiles version-controlled and server-side; construct runtime prompts in application code.
-- Keep advocate and judge response contracts centralized; the settled logical shapes are in `docs/architecture.md`; implement and validate at runtime before the first AI call; do not parse free-form prose for orchestration.
+- Keep advocate and judge response contracts centralized; the settled logical shapes are in `docs/architecture.md`; validate at runtime with the Zod schemas in `lib/ai/contracts/` before the first AI call; do not parse free-form prose for orchestration. Contract strings must be non-empty after trimming.
 - Models may interpret and argue from supplied facts but must not introduce new case facts.
 - Use PostgreSQL for the deployed application; Supabase is the preferred provider.
 - Use OpenRouter as the AI gateway and as the authoritative source of token/cost information.
@@ -100,4 +100,4 @@ Validate against observable criteria:
 | Partial Tribunal failure | Some agents succeed, others fail | Run must not silently produce a “successful” majority from incomplete/invalid data |
 | Retry causing uncontrolled extra model calls or cost | Repeated failures amplify spend and duplicate work | Retry policy must be explicit and bounded before multi-agent execution |
 
-Do not invent the charge-sheet structural contract. Advocate and judge logical contracts are settled in `docs/architecture.md`; runtime validators under `lib/ai/contracts/` remain future work.
+Do not invent the charge-sheet structural contract. Advocate and judge logical contracts are settled in `docs/architecture.md` and implemented as Zod schemas under `lib/ai/contracts/`.

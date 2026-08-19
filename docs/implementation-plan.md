@@ -22,11 +22,12 @@ Completed and verified:
 - Settled `SAME_MODEL` and `MIXED_MODELS` run-kind constants.
 - Supabase PostgreSQL TLS with official CA and certificate verification enabled (`certs/prod-ca-2021.crt`).
 - Settled advocate and judge response-contract logical shapes and runtime prompt-composition design (`docs/architecture.md`).
+- Runtime Zod validators under `lib/ai/contracts/` for advocate and judge responses (trimmed non-empty strings; extra fields forbidden).
 
 Not implemented:
 
 - AI execution against Tribunal Runs.
-- Runtime schema validators under `lib/ai/contracts/`, prompt builders, instructor character/profiles, and model configuration.
+- Prompt builders, instructor character/profiles, and model configuration.
 - OpenRouter integration.
 - Model-call audit/accounting records.
 - Tribunal orchestration, result UI, past-Case listing, and deployment.
@@ -144,7 +145,7 @@ No real AI call or orchestration should proceed without runtime validators match
 
 ### Scope
 
-- Implement runtime validators under `lib/ai/contracts/` matching the advocate and judge logical shapes in `docs/architecture.md`.
+- Completed (Phase 3A): runtime validators under `lib/ai/contracts/` matching the advocate and judge logical shapes in `docs/architecture.md`.
 - Keep TypeScript types aligned with those runtime validators.
 - Encode instructor-provided character/profiles under `lib/ai/profiles` as hard-coded, server-only, version-controlled application code.
 - Define stable identities for two defense advocates, two prosecution advocates, and three judges.
@@ -172,7 +173,7 @@ Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, prompt-
 
 ### Dependencies / blockers
 
-- Logical contract shapes and prompt composition are settled in documentation.
+- Logical contract shapes, prompt composition, and Zod runtime validators are in place (`lib/ai/contracts/`).
 - Encoding the seven character/profiles is blocked until the instructor supplies those profiles.
 - Model selection is deferred to this phase but not yet chosen.
 - Prompt composition may use raw validated Markdown until the charge-sheet structural contract is recorded; do not invent that structure.
@@ -561,12 +562,12 @@ Internal design still required:
 - Past-Case public-list/authentication/access policy and safe list metadata; retrieval by known unique ID is settled
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment topology
-- Runtime schema library/implementation under `lib/ai/contracts/`
 
-Settled in documentation (runtime implementation deferred to Phase 3):
+Settled:
 
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
 - Runtime prompt layer composition for advocates and judges
+- Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
 
 Waiting on instructor input or an explicit recorded contract:
 

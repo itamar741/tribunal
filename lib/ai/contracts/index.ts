@@ -1,16 +1,40 @@
+import * as z from "zod";
+
 /**
  * Centralized AI response contracts.
  *
- * Settled rules:
- * - One exact response schema shared by all advocates.
- * - One exact response schema shared by all judges.
- * - All advocate calls validate against the advocate contract at runtime.
- * - All judge calls validate against the judge contract at runtime.
- * - Orchestration must never depend on parsing free-form prose.
- *
- * Unresolved: exact schema fields have not been supplied yet.
- * Do not invent advocate or judge response fields here.
+ * - One exact schema shared by all advocates.
+ * - One exact schema shared by all judges.
+ * - Validate already-parsed unknown data; do not parse free-form prose.
+ * - Fail closed: extra fields, missing fields, wrong lengths, and
+ *   whitespace-only strings are rejected. Values are not coerced.
  */
 
-export type AdvocateResponseContract = unknown;
-export type JudgeResponseContract = unknown;
+const nonEmptyString = z.string().refine((value) => value.trim().length > 0);
+
+const advocateArgumentSchema = z.strictObject({
+  title: nonEmptyString,
+  argument: nonEmptyString,
+});
+
+export const advocateResponseSchema = z.strictObject({
+  summary: nonEmptyString,
+  arguments: z.tuple([
+    advocateArgumentSchema,
+    advocateArgumentSchema,
+    advocateArgumentSchema,
+  ]),
+  conclusion: nonEmptyString,
+});
+
+export const judgeVerdictSchema = z.enum(["GUILTY", "NOT_GUILTY"]);
+
+export const judgeResponseSchema = z.strictObject({
+  verdict: judgeVerdictSchema,
+  summary: nonEmptyString,
+  key_reasons: z.tuple([nonEmptyString, nonEmptyString, nonEmptyString]),
+});
+
+export type AdvocateResponse = z.infer<typeof advocateResponseSchema>;
+export type JudgeResponse = z.infer<typeof judgeResponseSchema>;
+export type JudgeVerdict = z.infer<typeof judgeVerdictSchema>;
