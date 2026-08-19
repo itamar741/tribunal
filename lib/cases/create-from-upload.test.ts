@@ -254,6 +254,53 @@ describe("Tribunal Run schema", () => {
     assert.match(sql, /from cases/i);
     assert.doesNotMatch(sql, /openrouter/i);
   });
+
+  it("expands run lifecycle without rewriting the original table", () => {
+    const sql = readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260819193000_expand_tribunal_run_lifecycle.sql",
+      ),
+      "utf8",
+    );
+
+    assert.match(sql, /PENDING/);
+    assert.match(sql, /RUNNING/);
+    assert.match(sql, /SUCCEEDED/);
+    assert.match(sql, /FAILED/);
+    assert.match(sql, /final_verdict/);
+    assert.match(sql, /started_at/);
+    assert.match(sql, /completed_at/);
+    assert.match(sql, /failure_reason/);
+    assert.match(sql, /GUILTY/);
+    assert.match(sql, /NOT_GUILTY/);
+    assert.doesNotMatch(sql, /drop table tribunal_runs/i);
+    assert.doesNotMatch(sql, /openrouter/i);
+  });
+});
+
+describe("Model Call schema", () => {
+  it("records one auditable attempt without prompts or raw output", () => {
+    const sql = readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260819193100_create_model_calls.sql",
+      ),
+      "utf8",
+    );
+
+    assert.match(sql, /create table model_calls/i);
+    assert.match(sql, /unique \(run_id, agent_role, attempt\)/i);
+    assert.match(sql, /foreign key \(run_id, case_id\)/i);
+    assert.match(sql, /validated_response jsonb/i);
+    assert.match(sql, /ADVOCATES/);
+    assert.match(sql, /JUDGES/);
+    assert.match(sql, /model_calls_case_id_idx/);
+    assert.doesNotMatch(sql, /\bprompt\b/i);
+    assert.doesNotMatch(sql, /raw_output/i);
+    assert.doesNotMatch(sql, /reasoning/i);
+    assert.doesNotMatch(sql, /openrouter/i);
+  });
 });
 
 describe("isCaseId", () => {

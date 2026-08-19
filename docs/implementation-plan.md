@@ -18,7 +18,9 @@ Completed and verified:
 - Case retrieval by unique ID without returning full Markdown text to the browser.
 - Every Case has exactly two Tribunal Run records (`SAME_MODEL` and `MIXED_MODELS`), created atomically with the Case and backfilled for existing Cases.
 - Newly created runs are `PENDING` (no AI execution yet). Unique `(case_id, run_type)` is enforced in PostgreSQL.
-- Focused upload-validation, Case-persistence, and Tribunal Run tests; `test`, `lint`, `typecheck`, `build`, and `migrate` scripts.
+- Tribunal Run lifecycle can persist `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`, including nullable `final_verdict`, `started_at`, `completed_at`, and `failure_reason`. A failed run cannot store a fabricated verdict.
+- Individual Model Call audit rows persist on `model_calls` (one row per actual API attempt) with Case/run association, stage, agent role, attempt, model, status, nullable usage/cost/duration/provider/error fields, and validated JSON only. Duplicate `(run_id, agent_role, attempt)` is rejected; `case_id` must match the run’s Case.
+- Focused upload-validation, Case-persistence, Tribunal Run, lifecycle, and Model Call tests; `test`, `lint`, `typecheck`, `build`, and `migrate` scripts.
 - Settled `SAME_MODEL` and `MIXED_MODELS` run-kind constants.
 - Supabase PostgreSQL TLS with official CA and certificate verification enabled (`certs/prod-ca-2021.crt`).
 - Settled advocate and judge response-contract logical shapes and runtime prompt-composition design (`docs/architecture.md`).
@@ -30,8 +32,8 @@ Not implemented:
 - AI execution against Tribunal Runs.
 - Prompt builders, instructor character/profiles, and model configuration.
 - OpenRouter integration.
-- Model-call audit/accounting records.
-- Tribunal orchestration, result UI, past-Case listing, and deployment.
+- Token/cost aggregation services, retries, advocate/judge execution, and dual-run orchestration.
+- Tribunal result UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
 
@@ -110,7 +112,7 @@ Every model attempt must reference both a Case and Tribunal Run, so stable run i
 
 - Add a migration for Tribunal Runs linked to Cases.
 - Enforce one run of each kind per Case.
-- Define minimal pending/running/succeeded/failed lifecycle states.
+- Define minimal pending/running/succeeded/failed lifecycle states (expanded in Phase 4A).
 - Create both run records transactionally with Case initialization.
 - Retrieve a Case with its two run IDs, kinds, and statuses.
 - Continue schema evolution through append-only migrations.
@@ -179,21 +181,59 @@ Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, prompt-
 - Model selection is deferred to this phase but not yet chosen.
 - Prompt composition may use raw validated Markdown until the charge-sheet structural contract is recorded; do not invent that structure.
 
+## Phase 4A — Model-call audit persistence and Tribunal Run lifecycle
+
+### Goal
+
+Add durable persistence for Tribunal Run lifecycle and every individual AI API attempt as a separate auditable Model Call, without making any AI calls.
+
+### Why this phase comes now
+
+OpenRouter execution and orchestration must write to stable run-state and attempt-audit records. Those tables and repositories are implemented here so later execution code does not invent schema or generic run updates.
+
+### Scope
+
+- Completed: expand `tribunal_runs.status` to `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`.
+- Completed: nullable `final_verdict`, `started_at`, `completed_at`, and `failure_reason`, with `final_verdict` limited to `GUILTY` / `NOT_GUILTY` and no fabricated verdict on failed runs.
+- Completed: `model_calls` table and `pg` repository for insert plus retrieval by Tribunal Run and Case.
+- Completed: unique `(run_id, agent_role, attempt)` and a composite foreign key so `case_id` cannot disagree with the Case belonging to `run_id`.
+- Completed: explicit run-lifecycle operations (`markRunning`, `markSucceeded`, `markFailed`).
+- Completed: focused schema, Model Call, and lifecycle persistence tests.
+
+### Explicitly out of scope
+
+OpenRouter requests, API keys, concrete model IDs, instructor profiles, prompt builders, retries, advocate/judge execution, majority calculation, dual-run orchestration, token/cost aggregation services, and UI/API result changes.
+
+### Expected repository impact
+
+Append-only migrations, `lib/cases` run-lifecycle types/repository, and `lib/model-calls`.
+
+### Verification gate
+
+- Existing Cases and PENDING runs survive the lifecycle migration.
+- Invalid run status and invalid final verdict are rejected.
+- Successful and failed Model Calls persist; unknown usage/cost remains null; validated JSON round-trips.
+- Invalid stage, agent role, attempt, foreign keys, duplicate attempts, and mismatched `case_id` / `run_id` are rejected.
+- PENDING → RUNNING, success with verdict, and failure with reason (no verdict) persist.
+
+### Dependencies / blockers
+
+Phases 2 and 3A. No OpenRouter credentials are required.
+
 ## Phase 4 — Audited OpenRouter one-agent vertical slice
 
 ### Goal
 
-Execute one real advocate attempt through a server-only OpenRouter adapter, validate its response, and persist a complete model-call audit record.
+Execute one real advocate attempt through a server-only OpenRouter adapter, validate its response, and persist a complete model-call audit record using the Phase 4A schema.
 
 ### Why this phase comes now
 
-One controlled call isolates gateway authentication, structured output, runtime validation, token/cost accounting, and failure recording before concurrency multiplies cost.
+One controlled call isolates gateway authentication, structured output, runtime validation, token/cost accounting, and failure recording before concurrency multiplies cost. The audit table and run-lifecycle operations already exist.
 
 ### Scope
 
 - Add a narrow server-only OpenRouter adapter.
-- Add a model-call migration/repository.
-- Treat every actual API attempt as a separate immutable source-of-truth record.
+- Treat every actual API attempt as a separate immutable source-of-truth record (write to the existing `model_calls` table).
 - Record at least:
   - Case association;
   - Tribunal Run association;
@@ -218,7 +258,7 @@ Four-agent concurrency, judges, majority calculation, dual-run coordination, and
 
 ### Expected repository impact
 
-`lib/ai`, model-call/output migrations and repositories, and a server-only one-agent application service or test harness.
+`lib/ai`, the existing model-call/run-lifecycle repositories, and a server-only one-agent application service or test harness.
 
 ### Verification gate
 
@@ -231,7 +271,7 @@ Four-agent concurrency, judges, majority calculation, dual-run coordination, and
 
 ### Dependencies / blockers
 
-Phases 2 and 3, OpenRouter credentials, and designed advocate contract plus at least one configured advocate profile/model. Usage/cost values come from OpenRouter.
+Phases 2, 3, and 4A, OpenRouter credentials, and designed advocate contract plus at least one configured advocate profile/model. Usage/cost values come from OpenRouter. The audit schema and run-lifecycle writes already exist.
 
 ## Phase 5 — Reusable engine: advocate stage
 

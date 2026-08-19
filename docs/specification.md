@@ -52,6 +52,16 @@ When the MVP is complete, the following must be observable:
 6. Newly created runs are stored as `PENDING` (AI execution has not started).
 7. Case retrieval by ID includes both run IDs, kinds, and statuses without returning charge-sheet text, secrets, or model configuration.
 
+**Model-call audit and run-lifecycle persistence phase success:**
+
+1. `tribunal_runs.status` accepts exactly `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`; other status values are rejected.
+2. `final_verdict`, when present, is exactly `GUILTY` or `NOT_GUILTY`; a `FAILED` run has no final verdict.
+3. Existing Cases and Tribunal Runs remain valid after the lifecycle migration.
+4. Every actual AI attempt can be stored as one `model_calls` row with Case, Tribunal Run, stage, agent role, attempt (1 or 2), model, status (`SUCCEEDED` or `FAILED`), nullable usage/cost/duration/provider/error fields, and nullable validated JSON.
+5. Duplicate `(run_id, agent_role, attempt)` rows are rejected; `case_id` cannot disagree with the Case belonging to `run_id`.
+6. Unknown usage/cost is stored as null, not zero. Prompts and raw model output are not stored.
+7. Repository operations can mark a run `RUNNING`, `SUCCEEDED` with a final verdict, or `FAILED` with a failure reason, and can insert/retrieve Model Calls for a run or Case.
+
 ## 3. Architectural guidance
 
 - Use a Next.js modular monolith (UI + server in one project).

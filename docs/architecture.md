@@ -76,6 +76,8 @@ Case (one charge sheet)
 - Case initialization also creates **exactly two** durable Tribunal Run records in the same transaction: one `SAME_MODEL` and one `MIXED_MODELS`.
 - Each run has its own unique ID, references the owning Case, and starts in `PENDING` status (created; AI execution has not started).
 - Duplicate `(case_id, run_type)` rows are rejected by a database unique constraint.
+- Allowed run lifecycle values are exactly `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`.
+- `SUCCEEDED` stores the run’s final verdict (`GUILTY` or `NOT_GUILTY`). `FAILED` stores a failure reason and must not store a fabricated final verdict.
 - Each case later executes those two Tribunal runs in parallel.
 - Each run later records its own agent outputs, majority verdict (the run’s final verdict), and model-call audit trail.
 
@@ -272,7 +274,7 @@ The three judges differ only through configuration: character/profile and model.
 - Schema changes are version-controlled SQL files under `supabase/migrations/`
 - Apply pending migrations with `npm run migrate`
 
-The initial Case table is:
+The Case table is:
 
 ```text
 cases
@@ -280,6 +282,22 @@ cases
   original_file_name text
   charge_sheet_text text
   created_at timestamptz
+```
+
+Tribunal Runs persist lifecycle state on `tribunal_runs`:
+
+```text
+tribunal_runs
+  id uuid
+  case_id uuid → cases.id
+  run_type SAME_MODEL | MIXED_MODELS
+  status PENDING | RUNNING | SUCCEEDED | FAILED
+  final_verdict nullable GUILTY | NOT_GUILTY
+  started_at nullable
+  completed_at nullable
+  failure_reason nullable
+  created_at timestamptz
+  unique (case_id, run_type)
 ```
 
 ### Why SQL vs NoSQL
@@ -327,7 +345,35 @@ Individual call records are the source of truth. Aggregates should normally be c
 - complete totals for each Tribunal Run;
 - complete totals for the Case across `SAME_MODEL` and `MIXED_MODELS`.
 
-OpenRouter-reported usage and cost are the source of truth for each attempt. If OpenRouter does not provide usage/cost for a failed call, store the value as unknown/null rather than incorrectly recording zero. The physical audit schema remains to be implemented.
+OpenRouter-reported usage and cost are the source of truth for each attempt. If OpenRouter does not provide usage/cost for a failed call, store the value as unknown/null rather than incorrectly recording zero.
+
+The physical audit table is `model_calls`. Each row is exactly one actual API attempt:
+
+```text
+model_calls
+  id uuid
+  case_id uuid → cases.id
+  run_id uuid → tribunal_runs.id
+  stage ADVOCATES | JUDGES
+  agent_role DEFENSE_1 | DEFENSE_2 | PROSECUTION_1 | PROSECUTION_2 | JUDGE_1 | JUDGE_2 | JUDGE_3
+  attempt 1 | 2
+  model text
+  status SUCCEEDED | FAILED
+  input_tokens / output_tokens / total_tokens nullable
+  input_cost / output_cost / total_cost nullable numeric
+  duration_ms nullable
+  provider_call_id nullable
+  validated_response nullable jsonb
+  error_type / error_message nullable
+  created_at timestamptz
+  unique (run_id, agent_role, attempt)
+```
+
+`case_id` must match the Case owned by `run_id`; this is enforced with a composite foreign key `(run_id, case_id) → tribunal_runs(id, case_id)`.
+
+A successful Model Call means the output passed the applicable runtime response contract. `validated_response` stores only that structured output. Failed calls normally store `NULL` there. Prompts, raw/malformed model output, hidden reasoning, and provider request payloads are not persisted.
+
+Unknown usage/cost is `NULL`, never falsely stored as zero. Aggregation of agent, stage, run, and Case totals is calculated later from these rows; this table is the source data only.
 
 ## Execution mechanism
 
@@ -413,6 +459,7 @@ components/          # UI components
 lib/
   charge-sheet/      # Validate/read .md → validated text (no MD parse)
   cases/             # Create/retrieve Case records and their two Tribunal Runs
+  model-calls/       # Persist/retrieve individual AI attempt audit rows
   tribunal/          # Reusable Tribunal engine (later)
   ai/
     profiles/        # Instructor hard-coded profiles (later)

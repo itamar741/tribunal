@@ -10,7 +10,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # AI Tribunal — agent rules
 
-- Preserve the modular Tribunal architecture (`lib/tribunal`, `lib/ai/*`, `lib/db`, `lib/charge-sheet`, `lib/cases`).
+- Preserve the modular Tribunal architecture (`lib/tribunal`, `lib/ai/*`, `lib/db`, `lib/charge-sheet`, `lib/cases`, `lib/model-calls`).
 - Use one reusable Tribunal engine; do not duplicate `SAME_MODEL` and `MIXED_MODELS` workflow logic.
 - Keep model assignment in configuration, not orchestration branches.
 - MVP charge sheets are `.md` only (read as UTF-8 text; do not parse or render Markdown); keep upload transport separate from validation/read and later pipeline stages; do not permanently store original uploads unless explicitly required.

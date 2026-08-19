@@ -1,21 +1,32 @@
 import type { TribunalRunKind } from "../ai/configurations";
 
-/**
- * Newly created runs have not started AI execution.
- * Later phases will expand this set through a new migration.
- */
 export const TribunalRunStatus = {
   PENDING: "PENDING",
+  RUNNING: "RUNNING",
+  SUCCEEDED: "SUCCEEDED",
+  FAILED: "FAILED",
 } as const;
 
 export type TribunalRunStatus =
   (typeof TribunalRunStatus)[keyof typeof TribunalRunStatus];
+
+export const TribunalRunVerdict = {
+  GUILTY: "GUILTY",
+  NOT_GUILTY: "NOT_GUILTY",
+} as const;
+
+export type TribunalRunVerdict =
+  (typeof TribunalRunVerdict)[keyof typeof TribunalRunVerdict];
 
 export type TribunalRunRecord = {
   id: string;
   caseId: string;
   runType: TribunalRunKind;
   status: TribunalRunStatus;
+  finalVerdict: TribunalRunVerdict | null;
+  startedAt: Date | null;
+  completedAt: Date | null;
+  failureReason: string | null;
   createdAt: Date;
 };
 

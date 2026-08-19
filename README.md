@@ -36,4 +36,4 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scope note
 
-Charge-sheet upload validation, Case persistence, and Tribunal Run persistence (`.md` only, unique Case per upload, exactly two `PENDING` runs) are implemented. OpenRouter, Tribunal orchestration, and response schemas are intentionally not implemented yet.
+Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, and runtime response-contract validators are implemented. OpenRouter integration and Tribunal orchestration are intentionally not implemented yet.

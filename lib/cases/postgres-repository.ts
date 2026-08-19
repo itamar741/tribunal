@@ -1,5 +1,6 @@
 import { TribunalRunKind } from "../ai/configurations";
 import { withClient, withTransaction } from "../db";
+import { TRIBUNAL_RUN_COLUMNS, toRun, type RunRow } from "./run-mapping";
 import {
   hasRequiredRunKinds,
   INITIAL_RUN_TYPES,
@@ -19,34 +20,6 @@ type CaseRow = {
   charge_sheet_text: string;
   created_at: Date;
 };
-
-type RunRow = {
-  id: string;
-  case_id: string;
-  run_type: string;
-  status: string;
-  created_at: Date;
-};
-
-function toRun(row: RunRow): TribunalRunRecord {
-  if (
-    row.run_type !== TribunalRunKind.SAME_MODEL &&
-    row.run_type !== TribunalRunKind.MIXED_MODELS
-  ) {
-    throw new Error(`Unexpected Tribunal Run type: ${row.run_type}`);
-  }
-  if (row.status !== TribunalRunStatus.PENDING) {
-    throw new Error(`Unexpected Tribunal Run status: ${row.status}`);
-  }
-
-  return {
-    id: row.id,
-    caseId: row.case_id,
-    runType: row.run_type,
-    status: row.status,
-    createdAt: row.created_at,
-  };
-}
 
 function toRecord(row: CaseRow, runs: TribunalRunRecord[]): CaseRecord {
   const ordered = sortInitialRuns(runs);
@@ -85,7 +58,7 @@ export class PostgresCaseRepository implements CaseRepository {
           values
             ($1, $2, $4),
             ($1, $3, $4)
-          returning id, case_id, run_type, status, created_at
+          returning ${TRIBUNAL_RUN_COLUMNS}
         `,
         [
           caseRow.id,
@@ -120,7 +93,7 @@ export class PostgresCaseRepository implements CaseRepository {
 
       const runResult = await client.query<RunRow>(
         `
-          select id, case_id, run_type, status, created_at
+          select ${TRIBUNAL_RUN_COLUMNS}
           from tribunal_runs
           where case_id = $1
           order by run_type
