@@ -34,8 +34,9 @@ Settled MVP input rules:
 - Content must be valid UTF-8; malformed byte sequences are rejected, not replaced.
 - Maximum size is 1 MB, enforced server-side.
 - Content is read as UTF-8 text; Markdown is not parsed or rendered in the current upload/persistence phase.
-- The `.md` file is structured input, not arbitrary free-form Markdown. The exact structural contract is not yet recorded in the repository and must be supplied/recorded before structural parsing is implemented.
-- Until that contract is recorded, validated Markdown text is stored unchanged.
+- The `.md` file is structured input, not arbitrary free-form Markdown.
+- Instructor Case T-001 (`The Realm v. Jon Snow`) is the canonical example charge sheet, stored as a project fixture at `fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`. That example contains labeled sections (Case, Accused, Deceased, Act alleged, base premises, agreed factual record, ISSUE, scope note). It is a reference example, not a complete generic Markdown grammar.
+- Do not implement structural parsing from T-001 alone. Until a machine-readable structural contract is explicitly recorded, validated Markdown text is stored unchanged.
 - There are no separate user-entered fields for defendant, alleged act, or question.
 - PDF, DOCX, TXT, image, OCR, and other formats are out of scope.
 - MIME type is not the sole acceptance criterion (browser/platform MIME for Markdown may vary).
@@ -59,7 +60,7 @@ Future application pipeline (AI execution, …)
 - Original uploaded files are **not** permanently stored (no filesystem archive, no database blob).
 - Validated Markdown text **is** persisted on the Case as the durable Tribunal input.
 - The original file name is persisted as Case metadata.
-- Structural parsing of the charge sheet is deferred until the exact structural contract is recorded.
+- Structural parsing of the charge sheet is deferred. T-001 is the canonical instructor example, not a recorded generic grammar.
 
 ## Domain relationship: Case → Tribunal Runs
 
@@ -130,8 +131,37 @@ Instructor-provided **character/profiles** live under `lib/ai/profiles/` as **ve
 - Not user-editable
 - Server-side only
 - The instructor supplies character/profile content only, not role prompts
-- Runtime prompts are constructed by the application from explicit layers (see **Runtime prompt composition** below), not seven unrelated prompt files
-- Concrete profile contents: **unresolved** (not yet supplied)
+- Profile text is configuration, separate from shared role/task instructions
+- Runtime prompts are constructed later by the application from explicit layers (see **Runtime prompt composition** below), not seven unrelated prompt files
+- Do not duplicate full profile text inside runtime execution code
+- Role, side, profile identity, and model identity are application configuration; model output must not define or override them
+- Model IDs are not part of profile configuration
+
+Seven instructor profiles are encoded, one per Tribunal seat:
+
+| Role | Character | Procedural side |
+| --- | --- | --- |
+| `DEFENSE_1` | Jon Snow | `DEFENSE` |
+| `DEFENSE_2` | Tyrion Lannister | `DEFENSE` |
+| `PROSECUTION_1` | Daenerys Targaryen | `PROSECUTION` |
+| `PROSECUTION_2` | Grey Worm | `PROSECUTION` |
+| `JUDGE_1` | Aaron Barak | none |
+| `JUDGE_2` | Menachem Elon | none |
+| `JUDGE_3` | Meir Shamgar | none |
+
+Representative simulation rule (instructor invariant):
+
+> The assigned seat fixes only each representative’s procedural role. It does not fix an opinion, factual inference, proposed argument, or final position. Let the model reason in character.
+
+The application assigns the procedural side. The model reasons in character within that role. A defense profile is not an instruction that the character must personally believe the killing was `JUSTIFIED`. A prosecution profile is not an instruction that the character must personally believe it was `NOT_JUSTIFIED`.
+
+Judge profiles are judicial-method simulation profiles. They adapt judicial methods; they do not impersonate the judges or predict what a real court would decide.
+
+The instructor dossier's Section 6 research record (Hebrew opinions and source links) is provenance/research context for how the judicial profiles were derived. It is not automatically additional runtime profile or prompt content. Sections 2–5 of the dossier are the runtime character material.
+
+The instructor source package is preserved at `docs/reference/tribunal-running-project-info-package.txt` as documentation/provenance only. Runtime code must not import or read that file. Do not duplicate that dossier across documents.
+
+The T-001 fixture preserves the original dossier scope note that the three opinions are not combined into one verdict. That line is superseded for this project by the later instructor clarification already recorded here: each judge returns `JUSTIFIED` or `NOT_JUSTIFIED`; all three valid opinions are required; a two-of-three majority is the final verdict of each Tribunal Run.
 
 ## Centralized response contracts
 
@@ -464,12 +494,14 @@ lib/
   model-calls/       # Persist/retrieve individual AI attempt audit rows
   tribunal/          # Reusable Tribunal engine (later)
   ai/
-    profiles/        # Instructor hard-coded profiles (later)
+    profiles/        # Instructor hard-coded profiles
     contracts/       # Central advocate/judge response contracts
     configurations/  # Run kinds and model assignment config
   db/                # PostgreSQL access and migration runner
 supabase/migrations/ # Append-only SQL migrations
+fixtures/charge-sheets/ # Canonical T-001 reference example
 docs/                # Framing, architecture, specification
+docs/reference/      # Instructor source dossier (provenance only)
 ```
 
 ## Unresolved decisions
@@ -488,7 +520,6 @@ Settled:
 - Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
 - Retry/failure policy (this document; runtime implementation deferred)
 
-Waiting on instructor input or an explicit recorded contract:
+Waiting on an explicit recorded contract:
 
-- Character/profile content for each of the seven agents
-- Exact Markdown charge-sheet structural contract (structure is defined, but not yet recorded here)
+- Exact Markdown charge-sheet structural contract. Instructor Case T-001 is available as the canonical example fixture; that example is not by itself a generic machine-readable grammar.

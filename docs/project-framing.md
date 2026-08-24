@@ -57,7 +57,6 @@ Internal design work still required (not instructor-owned):
 - Retention/privacy rules for persisted validated Markdown text
 - Deployment topology details beyond “Next.js app + PostgreSQL (Supabase preferred)”
 
-Still waiting on instructor input:
+Still waiting on an explicit recorded contract:
 
-- Character/profile content for each of the seven agents
-- The exact Markdown charge-sheet structural contract, so later structural parsing can be implemented without inventing the layout
+- The exact Markdown charge-sheet structural contract, so later structural parsing can be implemented without inventing a generic grammar. Instructor Case T-001 is available as the canonical example fixture and is not by itself that grammar.

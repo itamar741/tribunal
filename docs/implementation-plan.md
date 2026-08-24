@@ -26,11 +26,14 @@ Completed and verified:
 - Settled advocate and judge response-contract logical shapes and runtime prompt-composition design (`docs/architecture.md`).
 - Runtime Zod validators under `lib/ai/contracts/` for advocate and judge responses (trimmed non-empty strings; extra fields forbidden).
 - Settled retry/failure policy (`docs/architecture.md`): at most two attempts per agent; independent run failure; no majority from incomplete stages. Runtime retry is not implemented yet.
+- Canonical instructor Case T-001 charge sheet stored as a project fixture/reference (`fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`). T-001 is the canonical example, not a generic Markdown grammar.
+- Instructor source dossier preserved as documentation/provenance at `docs/reference/tribunal-running-project-info-package.txt`. Runtime code does not import or read that file.
+- Seven instructor profiles version-controlled under `lib/ai/profiles/`: Jon Snow and Tyrion Lannister (defense), Daenerys Targaryen and Grey Worm (prosecution), and Aaron Barak, Menachem Elon, and Meir Shamgar (judges). Representative seats assign a procedural side only; the model reasons in character. Judge profiles are judicial-method simulations.
 
 Not implemented:
 
 - AI execution against Tribunal Runs.
-- Prompt builders, instructor character/profiles, and model configuration.
+- Prompt builders and concrete OpenRouter model configuration.
 - OpenRouter integration.
 - Token/cost aggregation services, retries, advocate/judge execution, and dual-run orchestration.
 - Tribunal result UI, past-Case listing, and deployment.
@@ -150,8 +153,9 @@ No real AI call or orchestration should proceed without runtime validators match
 
 - Completed (Phase 3A): runtime validators under `lib/ai/contracts/` matching the advocate and judge logical shapes in `docs/architecture.md`.
 - Keep TypeScript types aligned with those runtime validators.
-- Encode instructor-provided character/profiles under `lib/ai/profiles` as hard-coded, server-only, version-controlled application code.
-- Define stable identities for two defense advocates, two prosecution advocates, and three judges.
+- Completed (Phase 3B): encode instructor-provided character/profiles under `lib/ai/profiles` as hard-coded, server-only, version-controlled application code.
+- Completed (Phase 3B): stable identities for two defense advocates, two prosecution advocates, and three judges, linked to instructor profile text without model IDs.
+- Completed (Phase 3B): canonical instructor Case T-001 stored as a project fixture/reference. The dossier is treated as the canonical example, not a complete generic Markdown grammar.
 - Build runtime prompts in application code from the settled layer model (advocate and judge compositions in `docs/architecture.md`).
 - Choose concrete OpenRouter models ourselves: one model for all seven agents in `SAME_MODEL`; seven different models in `MIXED_MODELS`.
 - Keep model assignment in configuration, not orchestration branches.
@@ -164,12 +168,13 @@ OpenRouter networking, orchestration, database output writes, UI, and inventing 
 
 ### Expected repository impact
 
-Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, prompt-construction code, and focused tests.
+Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, the T-001 fixture under `fixtures/charge-sheets/`, later prompt-construction code, and focused tests.
 
 ### Verification gate
 
 - Runtime validators exist; valid examples pass and malformed/missing/extra fields fail.
 - Every advocate uses the same advocate contract and every judge uses the same judge contract.
+- Seven instructor profiles are encoded once per seat, with no model IDs and with the representative simulation rule preserved.
 - Prompts are assembled from explicit layers, not seven unrelated static files.
 - Configuration, not orchestration branching, accounts for run differences.
 - Profiles, prompts, and configuration remain absent from client bundles.
@@ -177,9 +182,9 @@ Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, prompt-
 ### Dependencies / blockers
 
 - Logical contract shapes, prompt composition, and Zod runtime validators are in place (`lib/ai/contracts/`).
-- Encoding the seven character/profiles is blocked until the instructor supplies those profiles.
+- The seven instructor character/profiles are encoded under `lib/ai/profiles/`. Profile acquisition is no longer an open blocker.
 - Model selection is deferred to this phase but not yet chosen.
-- Prompt composition may use raw validated Markdown until the charge-sheet structural contract is recorded; do not invent that structure.
+- Prompt composition may use raw validated Markdown, including the T-001 fixture as the canonical example, until a generic charge-sheet structural contract is recorded; do not invent that structure from T-001 alone.
 
 ## Phase 4A — Model-call audit persistence and Tribunal Run lifecycle
 
@@ -592,7 +597,7 @@ The MVP Completion Gate below passes in a production-like environment, along wit
 
 ### Dependencies / blockers
 
-Phases 1–11, runtime contract implementation, instructor-supplied character/profiles, and provider credentials.
+Phases 1–11, runtime contract implementation, encoded instructor profiles, and provider credentials.
 
 ## Open Decisions
 
@@ -610,15 +615,13 @@ Settled:
 - Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
 - Retry/failure policy (`docs/architecture.md`; runtime implementation deferred)
 
-Waiting on instructor input or an explicit recorded contract:
+Waiting on an explicit recorded contract:
 
-- Character/profile content for each of the seven agents
-- Exact Markdown charge-sheet structural contract (structure is defined; not yet recorded in the repository)
+- Exact Markdown charge-sheet structural contract (T-001 is the canonical example fixture; it is not a generic grammar)
 
 ## Instructor Dependencies
 
-- Character/profile content for each of the seven agents
-- The exact Markdown charge-sheet structural contract, recorded before structural parsing is implemented
+- The exact Markdown charge-sheet structural contract, recorded before structural parsing is implemented. Profile acquisition is complete.
 
 ## MVP Completion Gate
 

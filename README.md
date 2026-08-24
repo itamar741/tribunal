@@ -36,4 +36,4 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scope note
 
-Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, and runtime response-contract validators are implemented. OpenRouter integration and Tribunal orchestration are intentionally not implemented yet.
+Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, and instructor agent profiles are implemented. OpenRouter integration, runtime prompt construction, and Tribunal orchestration are intentionally not implemented yet.

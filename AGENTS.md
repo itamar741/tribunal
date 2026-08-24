@@ -24,7 +24,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Models may interpret and argue from supplied charge-sheet facts and prior validated outputs, but must not introduce new case facts.
 - Side, profile, role, and model are application configuration; do not trust them as model-returned fields.
 - Construct runtime prompts in application code from explicit layers (role, side/profile, charge sheet, prior outputs, contract, constraints); do not maintain seven unrelated prompt files.
-- Do not invent the charge-sheet structural contract or missing instructor-provided profiles.
+- Do not invent a generic charge-sheet structural contract from the T-001 example. Instructor profiles are version-controlled under `lib/ai/profiles/`; do not rewrite their substantive text.
 - Do not expand MVP scope without an explicit requirement.
 - Prefer failure visibility; AI failures must never silently become valid verdicts.
 - Bound each AI agent to at most two API attempts (one initial, one retry); do not retry 401/403 or other permanent configuration/auth failures; do not switch models on retry.

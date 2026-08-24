@@ -66,7 +66,7 @@ When the MVP is complete, the following must be observable:
 
 - Use a Next.js modular monolith (UI + server in one project).
 - Accept only `.md` charge sheets as user input (valid UTF-8, 1 MB maximum; do not parse/render Markdown in the upload phase); keep upload transport separate from validation/read (`lib/charge-sheet`) and from later Tribunal stages.
-- Treat the Markdown charge sheet as structured input whose exact structural contract must be recorded before structural parsing is implemented; until then, persist the validated Markdown text unchanged.
+- Treat the Markdown charge sheet as structured input. Instructor Case T-001 is the canonical example fixture (`fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`); it is not a complete generic Markdown grammar. Persist validated Markdown text unchanged until a machine-readable structural contract is explicitly recorded.
 - Persist validated Markdown text and the original file name on a new unique Case for every successful upload; do not store the original file/blob; do not deduplicate.
 - Create exactly one `SAME_MODEL` and one `MIXED_MODELS` Tribunal Run with each Case, in the same transaction; enforce unique `(case_id, run_type)` in PostgreSQL.
 - Use PostgreSQL (Supabase preferred) with version-controlled SQL migrations and server-side `pg` access; do not introduce an ORM without an explicit requirement.
@@ -76,7 +76,7 @@ When the MVP is complete, the following must be observable:
 - Apply the settled majority-vote rule per run: three valid judge outputs; each judge returns `JUSTIFIED` or `NOT_JUSTIFIED`; ≥2 `JUSTIFIED` → `JUSTIFIED`; ≥2 `NOT_JUSTIFIED` → `NOT_JUSTIFIED`; a permanently failed judge yields no majority and a failed run. That majority is the run’s final verdict.
 - Treat each model API attempt as an immutable audit/accounting event; record OpenRouter-reported usage/cost; calculate aggregate totals from those records rather than unnecessarily duplicating stored totals.
 - Preserve a modular Tribunal execution service and begin with the simplest reliable Next.js-compatible execution path; add queue/background-job infrastructure only if measured runtime/deployment limits require it.
-- Keep instructor-provided character/profiles version-controlled and server-side; construct runtime prompts in application code.
+- Keep instructor-provided character/profiles version-controlled and server-side under `lib/ai/profiles/`; construct runtime prompts in application code. Assigned representative side is a procedural seat only; the model reasons in character. Judge profiles are judicial-method simulations, not impersonation claims. Dossier Section 6 research citations are provenance, not automatic runtime prompt content.
 - Keep advocate and judge response contracts centralized; the settled logical shapes are in `docs/architecture.md`; validate at runtime with the Zod schemas in `lib/ai/contracts/` before the first AI call; do not parse free-form prose for orchestration. Contract strings must be non-empty after trimming.
 - Models may interpret and argue from supplied facts but must not introduce new case facts.
 - Use PostgreSQL for the deployed application; Supabase is the preferred provider.
@@ -112,4 +112,4 @@ Validate against observable criteria:
 | Partial Tribunal failure | Some agents succeed, others fail | Run must not silently produce a “successful” majority from incomplete/invalid data |
 | Retry causing uncontrolled extra model calls or cost | Repeated failures amplify spend and duplicate work | At most two attempts per agent; see `docs/architecture.md` |
 
-Do not invent the charge-sheet structural contract. Advocate and judge logical contracts are settled in `docs/architecture.md` and implemented as Zod schemas under `lib/ai/contracts/`.
+Do not invent a generic charge-sheet structural contract from the T-001 example. Advocate and judge logical contracts are settled in `docs/architecture.md` and implemented as Zod schemas under `lib/ai/contracts/`. The T-001 fixture preserves an original dossier scope note that the three opinions are not combined; the active requirement remains the later two-of-three majority clarification in `docs/architecture.md`.
