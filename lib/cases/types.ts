@@ -11,8 +11,8 @@ export type TribunalRunStatus =
   (typeof TribunalRunStatus)[keyof typeof TribunalRunStatus];
 
 export const TribunalRunVerdict = {
-  GUILTY: "GUILTY",
-  NOT_GUILTY: "NOT_GUILTY",
+  JUSTIFIED: "JUSTIFIED",
+  NOT_JUSTIFIED: "NOT_JUSTIFIED",
 } as const;
 
 export type TribunalRunVerdict =

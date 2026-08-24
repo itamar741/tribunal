@@ -77,7 +77,7 @@ Case (one charge sheet)
 - Each run has its own unique ID, references the owning Case, and starts in `PENDING` status (created; AI execution has not started).
 - Duplicate `(case_id, run_type)` rows are rejected by a database unique constraint.
 - Allowed run lifecycle values are exactly `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`.
-- `SUCCEEDED` stores the run’s final verdict (`GUILTY` or `NOT_GUILTY`). `FAILED` stores a failure reason and must not store a fabricated final verdict.
+- `SUCCEEDED` stores the run’s final verdict (`JUSTIFIED` or `NOT_JUSTIFIED`). `FAILED` stores a failure reason and must not store a fabricated final verdict.
 - Each case later executes those two Tribunal runs in parallel.
 - Each run later records its own agent outputs, majority verdict (the run’s final verdict), and model-call audit trail.
 
@@ -111,9 +111,11 @@ Hard-coded `if (run === "SAME_MODEL")` paths multiply over time and hide the rea
    - two prosecution advocates
 2. **Judge stage** — starts **only after** all four advocate outputs for that run are available; three judges then run **in parallel**.
 3. **Majority calculation** — each run calculates its **own** majority verdict from that run’s three judge votes using this settled rule:
-   - exactly three judges vote;
-   - if at least two judges return `GUILTY`, the run majority verdict is `GUILTY`;
-   - if at least two judges return `NOT_GUILTY`, the run majority verdict is `NOT_GUILTY`.
+   - exactly three valid judge outputs are required;
+   - each judge returns exactly `JUSTIFIED` or `NOT_JUSTIFIED`;
+   - if at least two judges return `JUSTIFIED`, the run final verdict is `JUSTIFIED`;
+   - if at least two judges return `NOT_JUSTIFIED`, the run final verdict is `NOT_JUSTIFIED`;
+   - if any judge permanently fails under the retry policy, no majority is calculated and the run fails.
    - that majority is the **final verdict of the run**.
 4. A Case therefore produces two final AI outputs: the `SAME_MODEL` majority verdict and the `MIXED_MODELS` majority verdict. Both are shown to the human reviewer. There is no human-recorded final verdict.
 
@@ -183,7 +185,7 @@ One identical runtime-validatable contract for every judge, regardless of profil
 
 ```json
 {
-  "verdict": "GUILTY",
+  "verdict": "JUSTIFIED",
   "summary": "Concise explanation of the decision",
   "key_reasons": [
     "First key reason",
@@ -195,7 +197,7 @@ One identical runtime-validatable contract for every judge, regardless of profil
 
 Rules:
 
-- `verdict` — required; exactly `GUILTY` or `NOT_GUILTY`.
+- `verdict` — required; exactly `JUSTIFIED` or `NOT_JUSTIFIED`.
 - `summary` — required, trimmed non-empty string.
 - `key_reasons` — required array of exactly 3 trimmed non-empty strings.
 - Additional fields are forbidden.
@@ -252,7 +254,7 @@ The four advocates differ only through configuration: assigned side, character/p
 The judge must:
 
 - evaluate the charge sheet and all four advocate outputs independently;
-- return exactly `GUILTY` or `NOT_GUILTY`;
+- return exactly `JUSTIFIED` or `NOT_JUSTIFIED`;
 - use only supplied case facts and arguments;
 - not invent new case facts;
 - return exactly 3 key reasons;
@@ -292,7 +294,7 @@ tribunal_runs
   case_id uuid → cases.id
   run_type SAME_MODEL | MIXED_MODELS
   status PENDING | RUNNING | SUCCEEDED | FAILED
-  final_verdict nullable GUILTY | NOT_GUILTY
+  final_verdict nullable JUSTIFIED | NOT_JUSTIFIED
   started_at nullable
   completed_at nullable
   failure_reason nullable

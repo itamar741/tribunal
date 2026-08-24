@@ -23,7 +23,7 @@ When the MVP is complete, the following must be observable:
 9. The two runs run concurrently with each other.
 10. Every advocate output conforms to the single advocate response contract; non-conforming outputs are not treated as valid advocate results.
 11. Every judge output conforms to the single judge response contract; non-conforming outputs are not treated as valid judge results.
-12. Each run’s majority verdict follows the settled vote rule: exactly three judges vote; at least two `GUILTY` → run verdict `GUILTY`; at least two `NOT_GUILTY` → run verdict `NOT_GUILTY`.
+12. Each run’s majority verdict follows the settled vote rule: exactly three valid judge outputs are required; each judge returns `JUSTIFIED` or `NOT_JUSTIFIED`; at least two `JUSTIFIED` → run verdict `JUSTIFIED`; at least two `NOT_JUSTIFIED` → run verdict `NOT_JUSTIFIED`; if a judge permanently fails under the retry policy, no majority is calculated and the run fails.
 13. That majority is the final verdict of the run. Incomplete or invalid judging never produces a valid verdict.
 14. Both run majority verdicts are available to the human reviewer for the case as the two final AI outputs.
 15. Every actual model API attempt—including retries and failed attempts that incurred usage—is recorded individually with Case, Tribunal Run, stage (`ADVOCATES` or `JUDGES`), agent role, attempt number, model, input/output/total tokens, input/output/total cost, duration, and success/failure, using OpenRouter-reported usage/cost.
@@ -55,7 +55,7 @@ When the MVP is complete, the following must be observable:
 **Model-call audit and run-lifecycle persistence phase success:**
 
 1. `tribunal_runs.status` accepts exactly `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`; other status values are rejected.
-2. `final_verdict`, when present, is exactly `GUILTY` or `NOT_GUILTY`; a `FAILED` run has no final verdict.
+2. `final_verdict`, when present, is exactly `JUSTIFIED` or `NOT_JUSTIFIED`; a `FAILED` run has no final verdict.
 3. Existing Cases and Tribunal Runs remain valid after the lifecycle migration.
 4. Every actual AI attempt can be stored as one `model_calls` row with Case, Tribunal Run, stage, agent role, attempt (1 or 2), model, status (`SUCCEEDED` or `FAILED`), nullable usage/cost/duration/provider/error fields, and nullable validated JSON.
 5. Duplicate `(run_id, agent_role, attempt)` rows are rejected; `case_id` cannot disagree with the Case belonging to `run_id`.
@@ -73,7 +73,7 @@ When the MVP is complete, the following must be observable:
 - Keep file processing, AI calls, prompts, profiles, model configuration, validation, and cost calculation on the server.
 - Use one reusable Tribunal engine; differentiate `SAME_MODEL` and `MIXED_MODELS` by configuration only.
 - Choose concrete models ourselves: one model for all seven agents in `SAME_MODEL`, seven different models in `MIXED_MODELS`.
-- Apply the settled majority-vote rule per run: three judges; ≥2 `GUILTY` → `GUILTY`; ≥2 `NOT_GUILTY` → `NOT_GUILTY`. That majority is the run’s final verdict.
+- Apply the settled majority-vote rule per run: three valid judge outputs; each judge returns `JUSTIFIED` or `NOT_JUSTIFIED`; ≥2 `JUSTIFIED` → `JUSTIFIED`; ≥2 `NOT_JUSTIFIED` → `NOT_JUSTIFIED`; a permanently failed judge yields no majority and a failed run. That majority is the run’s final verdict.
 - Treat each model API attempt as an immutable audit/accounting event; record OpenRouter-reported usage/cost; calculate aggregate totals from those records rather than unnecessarily duplicating stored totals.
 - Preserve a modular Tribunal execution service and begin with the simplest reliable Next.js-compatible execution path; add queue/background-job infrastructure only if measured runtime/deployment limits require it.
 - Keep instructor-provided character/profiles version-controlled and server-side; construct runtime prompts in application code.
@@ -92,7 +92,7 @@ Validate against observable criteria:
 - **Manual:** upload path is clear; both run majority verdicts are reviewable when implemented.
 - **Contract:** advocate/judge responses fail closed when they do not match the settled central schemas in `docs/architecture.md`.
 - **Run integrity:** a run without successful contracted judge outputs does not present a successful majority verdict.
-- **Majority vote:** given three valid judge votes, the run verdict is `GUILTY` iff at least two are `GUILTY`, otherwise `NOT_GUILTY` when at least two are `NOT_GUILTY`. That verdict is the run’s final output.
+- **Majority vote:** given three valid judge votes, the run verdict is `JUSTIFIED` iff at least two are `JUSTIFIED`, otherwise `NOT_JUSTIFIED` when at least two are `NOT_JUSTIFIED`. That verdict is the run’s final output. A permanently failed judge yields no majority.
 - **Audit:** every actual attempt has the complete required Case/run/stage/agent/attempt/model/token/cost/duration/outcome fields; retries remain separate records; usage/cost come from OpenRouter; missing usage/cost is unknown/null, not zero.
 - **Accounting:** sums derived from call records reconcile at agent, stage, run, and Case levels, including failed attempts that incurred usage.
 - **Retries:** each agent has at most two attempts; 401/403 and other permanent failures are not retried; a failed advocate stage blocks judges; a failed judge stage yields no majority; `SAME_MODEL` and `MIXED_MODELS` fail independently.

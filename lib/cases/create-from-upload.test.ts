@@ -272,10 +272,24 @@ describe("Tribunal Run schema", () => {
     assert.match(sql, /started_at/);
     assert.match(sql, /completed_at/);
     assert.match(sql, /failure_reason/);
-    assert.match(sql, /GUILTY/);
-    assert.match(sql, /NOT_GUILTY/);
     assert.doesNotMatch(sql, /drop table tribunal_runs/i);
     assert.doesNotMatch(sql, /openrouter/i);
+  });
+
+  it("corrects verdict terminology in a later append-only migration", () => {
+    const sql = readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260824170000_verdict_justified_not_justified.sql",
+      ),
+      "utf8",
+    );
+
+    assert.match(sql, /JUSTIFIED/);
+    assert.match(sql, /NOT_JUSTIFIED/);
+    assert.match(sql, /tribunal_runs_final_verdict_check/);
+    assert.match(sql, /tribunal_runs_lifecycle_check/);
+    assert.doesNotMatch(sql, /drop table tribunal_runs/i);
   });
 });
 

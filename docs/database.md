@@ -65,7 +65,7 @@ tribunal_runs
   status text not null default 'PENDING'
     check (status in ('PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED'))
   final_verdict text
-    check (final_verdict is null or final_verdict in ('GUILTY', 'NOT_GUILTY'))
+    check (final_verdict is null or final_verdict in ('JUSTIFIED', 'NOT_JUSTIFIED'))
   started_at timestamptz
   completed_at timestamptz
   failure_reason text
@@ -114,8 +114,10 @@ Run lifecycle:
 
 - `PENDING`: the run exists; AI execution has not started. Companion result fields are null.
 - `RUNNING`: AI execution has started (`started_at` set).
-- `SUCCEEDED`: required agents completed and a valid `final_verdict` (`GUILTY` or `NOT_GUILTY`) exists.
+- `SUCCEEDED`: required agents completed and a valid `final_verdict` (`JUSTIFIED` or `NOT_JUSTIFIED`) exists.
 - `FAILED`: execution terminated according to the documented failure policy. `failure_reason` is stored; `final_verdict` must be null.
+
+Judge and Tribunal Run verdicts are `JUSTIFIED | NOT_JUSTIFIED`. Three valid judge verdicts are required; a 2-of-3 majority determines the run’s final verdict.
 
 Each `model_calls` row is one actual AI API attempt. `SUCCEEDED` means the output passed the applicable runtime response contract; that structured output is stored in `validated_response`. Failed attempts normally store `NULL` there. Unknown usage/cost is `NULL`, never zero. Prompts, raw model output, hidden reasoning, and provider request payloads are not stored.
 

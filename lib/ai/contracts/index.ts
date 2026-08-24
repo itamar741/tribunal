@@ -27,7 +27,7 @@ export const advocateResponseSchema = z.strictObject({
   conclusion: nonEmptyString,
 });
 
-export const judgeVerdictSchema = z.enum(["GUILTY", "NOT_GUILTY"]);
+export const judgeVerdictSchema = z.enum(["JUSTIFIED", "NOT_JUSTIFIED"]);
 
 export const judgeResponseSchema = z.strictObject({
   verdict: judgeVerdictSchema,

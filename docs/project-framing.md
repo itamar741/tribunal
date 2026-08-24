@@ -22,7 +22,7 @@ For the overall MVP (across phases), done means:
 - Every successful upload creates a new Case with a unique ID and stores the original file name; identical uploads create separate Cases and there is no MVP deduplication.
 - The system creates a case and executes two Tribunal runs in parallel: `SAME_MODEL` and `MIXED_MODELS`.
 - Both runs use one reusable Tribunal engine; differences are configuration only.
-- Each run completes advocate stage then judge stage, then produces its own majority verdict (`GUILTY` if at least two of three judges vote `GUILTY`; `NOT_GUILTY` if at least two vote `NOT_GUILTY`).
+- Each run completes advocate stage then judge stage, then produces its own majority verdict (`JUSTIFIED` if at least two of three judges vote `JUSTIFIED`; `NOT_JUSTIFIED` if at least two vote `NOT_JUSTIFIED`).
 - That majority is the final verdict of the run. A Case produces two final AI outputs: the `SAME_MODEL` majority and the `MIXED_MODELS` majority.
 - Advocate and judge outputs conform to centralized response contracts and are validated at runtime.
 - Every actual model attempt is individually audited for its Case, Tribunal Run, stage, agent role, attempt number, model, token usage, cost, duration, and success/failure.

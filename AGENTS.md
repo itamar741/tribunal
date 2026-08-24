@@ -30,5 +30,5 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Bound each AI agent to at most two API attempts (one initial, one retry); do not retry 401/403 or other permanent configuration/auth failures; do not switch models on retry.
 - A failed advocate after two attempts fails that run and blocks judges; a failed judge after two attempts yields no majority; do not majority-vote from two judges. `SAME_MODEL` and `MIXED_MODELS` fail independently.
 - There is no manual rerun of an existing Tribunal Run; another execution requires a new Case. Canonical retry/failure policy: `docs/architecture.md`.
-- There is no human-recorded final verdict; each run’s two-of-three judge majority is that run’s final verdict.
+- There is no human-recorded final verdict; each run’s two-of-three judge majority is that run’s final verdict. Judge and Tribunal Run verdicts are `JUSTIFIED | NOT_JUSTIFIED`.
 - Verify work against `docs/specification.md` before reporting completion.

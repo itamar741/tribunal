@@ -91,8 +91,8 @@ function advocateResponse() {
 
 function judgeResponse() {
   return judgeResponseSchema.parse({
-    verdict: "NOT_GUILTY",
-    summary: "The evidence is insufficient.",
+    verdict: "NOT_JUSTIFIED",
+    summary: "The evidence is insufficient to justify the killing.",
     key_reasons: ["Reason one", "Reason two", "Reason three"],
   });
 }
@@ -362,7 +362,7 @@ describe("PostgreSQL persistence", {
           update tribunal_runs
           set
             status = 'SUCCEEDED',
-            final_verdict = 'GUILTY',
+            final_verdict = 'JUSTIFIED',
             started_at = now(),
             completed_at = now()
           where id = $1
@@ -408,6 +408,33 @@ describe("PostgreSQL persistence", {
           ]),
         isCheckViolation,
       );
+    });
+
+    it("rejects obsolete GUILTY and NOT_GUILTY final verdict values", async () => {
+      const cases = new PostgresCaseRepository();
+      const created = await cases.create({
+        originalFileName: `${PHASE4A_FILE_PREFIX}obsolete-verdict.md`,
+        chargeSheetText: "Obsolete verdict values must be rejected.",
+      });
+
+      for (const verdict of ["GUILTY", "NOT_GUILTY"]) {
+        await assert.rejects(
+          () =>
+            query(
+              `
+                update tribunal_runs
+                set
+                  status = 'SUCCEEDED',
+                  final_verdict = $2,
+                  started_at = now(),
+                  completed_at = now()
+                where id = $1
+              `,
+              [created.runs[0].id, verdict],
+            ),
+          isCheckViolation,
+        );
+      }
     });
 
     it("rejects an invalid final verdict", async () => {
@@ -458,22 +485,43 @@ describe("PostgreSQL persistence", {
       assert.ok(found.startedAt instanceof Date);
     });
 
-    it("persists SUCCEEDED with a final verdict", async () => {
+    it("persists SUCCEEDED with JUSTIFIED", async () => {
       const cases = new PostgresCaseRepository();
       const runs = new PostgresTribunalRunRepository();
       const created = await cases.create({
-        originalFileName: `${PHASE4A_FILE_PREFIX}succeeded.md`,
-        chargeSheetText: "Mark succeeded.",
+        originalFileName: `${PHASE4A_FILE_PREFIX}succeeded-justified.md`,
+        chargeSheetText: "Mark succeeded with JUSTIFIED.",
       });
 
       await runs.markRunning(created.runs[0].id);
       const updated = await runs.markSucceeded(
         created.runs[0].id,
-        TribunalRunVerdict.NOT_GUILTY,
+        TribunalRunVerdict.JUSTIFIED,
       );
 
       assert.equal(updated.status, TribunalRunStatus.SUCCEEDED);
-      assert.equal(updated.finalVerdict, TribunalRunVerdict.NOT_GUILTY);
+      assert.equal(updated.finalVerdict, TribunalRunVerdict.JUSTIFIED);
+      assert.ok(updated.startedAt instanceof Date);
+      assert.ok(updated.completedAt instanceof Date);
+      assert.equal(updated.failureReason, null);
+    });
+
+    it("persists SUCCEEDED with NOT_JUSTIFIED", async () => {
+      const cases = new PostgresCaseRepository();
+      const runs = new PostgresTribunalRunRepository();
+      const created = await cases.create({
+        originalFileName: `${PHASE4A_FILE_PREFIX}succeeded-not-justified.md`,
+        chargeSheetText: "Mark succeeded with NOT_JUSTIFIED.",
+      });
+
+      await runs.markRunning(created.runs[0].id);
+      const updated = await runs.markSucceeded(
+        created.runs[0].id,
+        TribunalRunVerdict.NOT_JUSTIFIED,
+      );
+
+      assert.equal(updated.status, TribunalRunStatus.SUCCEEDED);
+      assert.equal(updated.finalVerdict, TribunalRunVerdict.NOT_JUSTIFIED);
       assert.ok(updated.startedAt instanceof Date);
       assert.ok(updated.completedAt instanceof Date);
       assert.equal(updated.failureReason, null);
@@ -483,7 +531,7 @@ describe("PostgreSQL persistence", {
       const persisted = caseRecord.runs.find((run) => run.id === created.runs[0].id);
       assert.ok(persisted);
       assert.equal(persisted.status, TribunalRunStatus.SUCCEEDED);
-      assert.equal(persisted.finalVerdict, TribunalRunVerdict.NOT_GUILTY);
+      assert.equal(persisted.finalVerdict, TribunalRunVerdict.NOT_JUSTIFIED);
     });
 
     it("persists FAILED with a failure reason and no final verdict", async () => {

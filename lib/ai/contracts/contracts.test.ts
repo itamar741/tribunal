@@ -21,22 +21,22 @@ const validAdvocate = {
       argument: "The remaining facts do not meet the burden of proof.",
     },
   ],
-  conclusion: "The accused should be found not guilty.",
+  conclusion: "The killing was not justified on these facts.",
 } as const;
 
-const validGuiltyJudge = {
-  verdict: "GUILTY",
-  summary: "The supplied facts and arguments support guilt.",
+const validJustifiedJudge = {
+  verdict: "JUSTIFIED",
+  summary: "The supplied facts and arguments support justification.",
   key_reasons: [
-    "The charge sheet records a clear alleged act.",
+    "The charge sheet records a clear intentional killing.",
     "Prosecution arguments track those facts.",
-    "Defense arguments do not displace the recorded facts.",
+    "Defense arguments do not displace the recorded justification analysis.",
   ],
 } as const;
 
-const validNotGuiltyJudge = {
-  verdict: "NOT_GUILTY",
-  summary: "The supplied facts do not establish guilt.",
+const validNotJustifiedJudge = {
+  verdict: "NOT_JUSTIFIED",
+  summary: "The supplied facts do not establish justification.",
   key_reasons: [
     "The charge sheet leaves a material gap.",
     "Defense arguments stay within those facts.",
@@ -184,51 +184,70 @@ describe("advocateResponseSchema", () => {
 });
 
 describe("judgeResponseSchema", () => {
-  it("accepts a GUILTY response", () => {
-    const result = judgeResponseSchema.safeParse(validGuiltyJudge);
+  it("accepts a JUSTIFIED response", () => {
+    const result = judgeResponseSchema.safeParse(validJustifiedJudge);
 
     assert.equal(result.success, true);
     if (result.success) {
-      assert.deepEqual(result.data, validGuiltyJudge);
+      assert.deepEqual(result.data, validJustifiedJudge);
     }
   });
 
-  it("accepts a NOT_GUILTY response", () => {
-    const result = judgeResponseSchema.safeParse(validNotGuiltyJudge);
+  it("accepts a NOT_JUSTIFIED response", () => {
+    const result = judgeResponseSchema.safeParse(validNotJustifiedJudge);
 
     assert.equal(result.success, true);
     if (result.success) {
-      assert.deepEqual(result.data, validNotGuiltyJudge);
+      assert.deepEqual(result.data, validNotJustifiedJudge);
     }
+  });
+
+  it("rejects obsolete GUILTY and NOT_GUILTY verdict values", () => {
+    const guilty = judgeResponseSchema.safeParse({
+      ...validJustifiedJudge,
+      verdict: "GUILTY",
+    });
+    const notGuilty = judgeResponseSchema.safeParse({
+      ...validNotJustifiedJudge,
+      verdict: "NOT_GUILTY",
+    });
+
+    assert.equal(guilty.success, false);
+    assert.equal(notGuilty.success, false);
   });
 
   it("rejects an invalid verdict such as MAYBE", () => {
     const result = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
+      ...validJustifiedJudge,
       verdict: "MAYBE",
     });
 
     assert.equal(result.success, false);
   });
 
-  it("rejects lowercase or prose verdicts", () => {
+  it("rejects lowercase, whitespace-padded, or prose verdicts", () => {
     const lowercase = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
-      verdict: "guilty",
+      ...validJustifiedJudge,
+      verdict: "justified",
+    });
+    const padded = judgeResponseSchema.safeParse({
+      ...validJustifiedJudge,
+      verdict: "JUSTIFIED ",
     });
     const prose = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
-      verdict: "likely guilty",
+      ...validJustifiedJudge,
+      verdict: "likely justified",
     });
 
     assert.equal(lowercase.success, false);
+    assert.equal(padded.success, false);
     assert.equal(prose.success, false);
   });
 
   it("rejects a missing field", () => {
     const result = judgeResponseSchema.safeParse({
-      verdict: validGuiltyJudge.verdict,
-      key_reasons: validGuiltyJudge.key_reasons,
+      verdict: validJustifiedJudge.verdict,
+      key_reasons: validJustifiedJudge.key_reasons,
     });
 
     assert.equal(result.success, false);
@@ -236,7 +255,7 @@ describe("judgeResponseSchema", () => {
 
   it("rejects an additional field", () => {
     const result = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
+      ...validJustifiedJudge,
       confidence: 0.9,
     });
 
@@ -245,8 +264,8 @@ describe("judgeResponseSchema", () => {
 
   it("rejects 2 reasons", () => {
     const result = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
-      key_reasons: validGuiltyJudge.key_reasons.slice(0, 2),
+      ...validJustifiedJudge,
+      key_reasons: validJustifiedJudge.key_reasons.slice(0, 2),
     });
 
     assert.equal(result.success, false);
@@ -254,8 +273,8 @@ describe("judgeResponseSchema", () => {
 
   it("rejects 4 reasons", () => {
     const result = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
-      key_reasons: [...validGuiltyJudge.key_reasons, "An extra reason."],
+      ...validJustifiedJudge,
+      key_reasons: [...validJustifiedJudge.key_reasons, "An extra reason."],
     });
 
     assert.equal(result.success, false);
@@ -263,11 +282,11 @@ describe("judgeResponseSchema", () => {
 
   it("rejects an empty or whitespace summary", () => {
     const emptySummary = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
+      ...validJustifiedJudge,
       summary: "",
     });
     const whitespaceSummary = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
+      ...validJustifiedJudge,
       summary: "   ",
     });
 
@@ -277,15 +296,15 @@ describe("judgeResponseSchema", () => {
 
   it("rejects an empty or whitespace reason", () => {
     const emptyReason = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
-      key_reasons: ["", validGuiltyJudge.key_reasons[1], validGuiltyJudge.key_reasons[2]],
+      ...validJustifiedJudge,
+      key_reasons: ["", validJustifiedJudge.key_reasons[1], validJustifiedJudge.key_reasons[2]],
     });
     const whitespaceReason = judgeResponseSchema.safeParse({
-      ...validGuiltyJudge,
+      ...validJustifiedJudge,
       key_reasons: [
         " \n ",
-        validGuiltyJudge.key_reasons[1],
-        validGuiltyJudge.key_reasons[2],
+        validJustifiedJudge.key_reasons[1],
+        validJustifiedJudge.key_reasons[2],
       ],
     });
 

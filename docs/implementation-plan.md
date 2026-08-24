@@ -194,7 +194,7 @@ OpenRouter execution and orchestration must write to stable run-state and attemp
 ### Scope
 
 - Completed: expand `tribunal_runs.status` to `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`.
-- Completed: nullable `final_verdict`, `started_at`, `completed_at`, and `failure_reason`, with `final_verdict` limited to `GUILTY` / `NOT_GUILTY` and no fabricated verdict on failed runs.
+- Completed: nullable `final_verdict`, `started_at`, `completed_at`, and `failure_reason`, with `final_verdict` limited to `JUSTIFIED` / `NOT_JUSTIFIED` and no fabricated verdict on failed runs.
 - Completed: `model_calls` table and `pg` repository for insert plus retrieval by Tribunal Run and Case.
 - Completed: unique `(run_id, agent_role, attempt)` and a composite foreign key so `case_id` cannot disagree with the Case belonging to `run_id`.
 - Completed: explicit run-lifecycle operations (`markRunning`, `markSucceeded`, `markFailed`).
