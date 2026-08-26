@@ -19,11 +19,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Enforce a 1 MB server-side size limit and reject malformed UTF-8 rather than replacing it.
 - Use version-controlled SQL migrations and server-side PostgreSQL (`pg`); do not introduce an ORM without an explicit requirement.
 - Do not expose server secrets, prompts, profiles, or API keys to the client.
-- Keep instructor-provided character/profiles version-controlled under `lib/ai/profiles/`; construct runtime prompts in application code.
+- Keep instructor-provided character/profiles version-controlled under `lib/ai/profiles/`; construct runtime prompts in application code under `lib/ai/prompts/` (one representative builder, one judge builder).
 - Keep advocate and judge response contracts centralized under `lib/ai/contracts/` as Zod schemas; the settled logical shapes are documented in `docs/architecture.md`; validate unknown structured output there before the first AI call; do not parse free-form prose for orchestration. Contract strings must be non-empty after trimming; extra fields are forbidden.
 - Models may interpret and argue from supplied charge-sheet facts and prior validated outputs, but must not introduce new case facts.
 - Side, profile, role, and model are application configuration; do not trust them as model-returned fields.
-- Construct runtime prompts in application code from explicit layers (role, side/profile, charge sheet, prior outputs, contract, constraints); do not maintain seven unrelated prompt files.
+- Construct runtime prompts in application code from explicit layers (role, side/profile, charge sheet, prior outputs, contract, constraints); do not maintain seven unrelated prompt files. Keep trusted instructions separate from untrusted charge-sheet and advocate content.
 - Do not invent a generic charge-sheet structural contract from the T-001 example. Instructor profiles are version-controlled under `lib/ai/profiles/`; do not rewrite their substantive text.
 - Do not expand MVP scope without an explicit requirement.
 - Prefer failure visibility; AI failures must never silently become valid verdicts.

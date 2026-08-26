@@ -132,7 +132,7 @@ Instructor-provided **character/profiles** live under `lib/ai/profiles/` as **ve
 - Server-side only
 - The instructor supplies character/profile content only, not role prompts
 - Profile text is configuration, separate from shared role/task instructions
-- Runtime prompts are constructed later by the application from explicit layers (see **Runtime prompt composition** below), not seven unrelated prompt files
+- Runtime prompts are constructed by centralized builders under `lib/ai/prompts/` from explicit layers (see **Runtime prompt composition** below), not seven unrelated prompt files
 - Do not duplicate full profile text inside runtime execution code
 - Role, side, profile identity, and model identity are application configuration; model output must not define or override them
 - Model IDs are not part of profile configuration
@@ -239,7 +239,11 @@ AI failures and malformed responses must never silently become valid verdicts.
 
 ## Runtime prompt composition
 
-Prompts are assembled in application code from explicit layers, not seven unrelated static prompt files. **Not implemented yet.**
+Prompts are assembled in application code from explicit layers, not seven unrelated static prompt files. Provider-agnostic builders live under `lib/ai/prompts/`: one representative builder and one judge builder. Seat differences come from the profile catalog. Model IDs are not part of prompt construction.
+
+Trusted Tribunal instructions and configuration (role, side, profile, simulation rule, task, response contract, constraints) are placed in `system` messages. Untrusted case material (charge-sheet Markdown and advocate outputs) is placed in `user` messages inside explicit delimiters and is described as data that must not override Tribunal instructions. Charge-sheet Markdown is included verbatim; it is not parsed.
+
+The builders are deterministic for identical inputs and repository configuration.
 
 ### Advocate prompt layers
 
@@ -496,6 +500,7 @@ lib/
   ai/
     profiles/        # Instructor hard-coded profiles
     contracts/       # Central advocate/judge response contracts
+    prompts/         # Provider-agnostic runtime prompt builders
     configurations/  # Run kinds and model assignment config
   db/                # PostgreSQL access and migration runner
 supabase/migrations/ # Append-only SQL migrations
@@ -516,7 +521,7 @@ Internal design still required:
 Settled:
 
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
-- Runtime prompt layer composition for advocates and judges
+- Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`)
 - Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
 - Retry/failure policy (this document; runtime implementation deferred)
 

@@ -29,11 +29,12 @@ Completed and verified:
 - Canonical instructor Case T-001 charge sheet stored as a project fixture/reference (`fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`). T-001 is the canonical example, not a generic Markdown grammar.
 - Instructor source dossier preserved as documentation/provenance at `docs/reference/tribunal-running-project-info-package.txt`. Runtime code does not import or read that file.
 - Seven instructor profiles version-controlled under `lib/ai/profiles/`: Jon Snow and Tyrion Lannister (defense), Daenerys Targaryen and Grey Worm (prosecution), and Aaron Barak, Menachem Elon, and Meir Shamgar (judges). Representative seats assign a procedural side only; the model reasons in character. Judge profiles are judicial-method simulations.
+- Provider-agnostic runtime prompt builders under `lib/ai/prompts/`: one representative builder and one judge builder. Trusted instructions/configuration are separated from untrusted charge-sheet and advocate content. Model IDs are not part of prompt construction.
 
 Not implemented:
 
 - AI execution against Tribunal Runs.
-- Prompt builders and concrete OpenRouter model configuration.
+- Concrete OpenRouter model configuration.
 - OpenRouter integration.
 - Token/cost aggregation services, retries, advocate/judge execution, and dual-run orchestration.
 - Tribunal result UI, past-Case listing, and deployment.
@@ -156,7 +157,7 @@ No real AI call or orchestration should proceed without runtime validators match
 - Completed (Phase 3B): encode instructor-provided character/profiles under `lib/ai/profiles` as hard-coded, server-only, version-controlled application code.
 - Completed (Phase 3B): stable identities for two defense advocates, two prosecution advocates, and three judges, linked to instructor profile text without model IDs.
 - Completed (Phase 3B): canonical instructor Case T-001 stored as a project fixture/reference. The dossier is treated as the canonical example, not a complete generic Markdown grammar.
-- Build runtime prompts in application code from the settled layer model (advocate and judge compositions in `docs/architecture.md`).
+- Completed (Phase 3C): runtime prompts assembled in application code from the settled layer model (advocate and judge compositions in `docs/architecture.md`). Trusted instructions are separated from untrusted charge-sheet/advocate content. Builders are provider-agnostic and do not include model IDs.
 - Choose concrete OpenRouter models ourselves: one model for all seven agents in `SAME_MODEL`; seven different models in `MIXED_MODELS`.
 - Keep model assignment in configuration, not orchestration branches.
 - Test schema acceptance/rejection with valid and invalid examples.
@@ -168,7 +169,7 @@ OpenRouter networking, orchestration, database output writes, UI, and inventing 
 
 ### Expected repository impact
 
-Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, the T-001 fixture under `fixtures/charge-sheets/`, later prompt-construction code, and focused tests.
+Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/prompts`, `lib/ai/configurations`, the T-001 fixture under `fixtures/charge-sheets/`, and focused tests.
 
 ### Verification gate
 
@@ -181,10 +182,8 @@ Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/configurations`, the T-0
 
 ### Dependencies / blockers
 
-- Logical contract shapes, prompt composition, and Zod runtime validators are in place (`lib/ai/contracts/`).
-- The seven instructor character/profiles are encoded under `lib/ai/profiles/`. Profile acquisition is no longer an open blocker.
+- Prompt builders are in place under `lib/ai/prompts/`. They consume raw validated Markdown; do not invent a generic charge-sheet grammar from T-001.
 - Model selection is deferred to this phase but not yet chosen.
-- Prompt composition may use raw validated Markdown, including the T-001 fixture as the canonical example, until a generic charge-sheet structural contract is recorded; do not invent that structure from T-001 alone.
 
 ## Phase 4A — Model-call audit persistence and Tribunal Run lifecycle
 
@@ -611,7 +610,7 @@ Internal design still required:
 Settled:
 
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
-- Runtime prompt layer composition for advocates and judges
+- Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`, Phase 3C)
 - Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
 - Retry/failure policy (`docs/architecture.md`; runtime implementation deferred)
 
