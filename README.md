@@ -8,6 +8,7 @@ Next.js modular monolith for dual AI Tribunal analysis of an uploaded charge she
 - [Architecture](docs/architecture.md)
 - [Specification](docs/specification.md)
 - [Implementation plan](docs/implementation-plan.md)
+- [Model selection](docs/model-selection.md)
 - [Database](docs/database.md)
 
 ## Getting started
@@ -36,4 +37,4 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scope note
 
-Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, instructor agent profiles, and provider-agnostic runtime prompt builders are implemented. OpenRouter integration, concrete model IDs, and Tribunal orchestration are intentionally not implemented yet.
+Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, instructor agent profiles, provider-agnostic runtime prompt builders, and version-controlled OpenRouter model assignment are implemented. OpenRouter integration and Tribunal orchestration are intentionally not implemented yet. Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).

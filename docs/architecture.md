@@ -99,7 +99,7 @@ Duplicating “same-model” and “mixed-models” workflows would drift: stage
 | `SAME_MODEL` | All seven agents use the same model |
 | `MIXED_MODELS` | Each of the seven agents uses a different model |
 
-Model assignment is configuration, not branching buried inside orchestration logic.
+Model assignment is configuration, not branching buried inside orchestration logic. Concrete OpenRouter IDs, the standby pool, and the selection rationale are recorded in [`docs/model-selection.md`](model-selection.md). Runtime lookup lives in `lib/ai/configurations/`.
 
 ### Why configuration-based assignment vs hard-coded branching
 
@@ -350,7 +350,7 @@ SQLite can work for local experiments, but the settled deployment target is a ho
 
 ### OpenRouter
 
-OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Integration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
+OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). Integration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
 
 ## Model-call audit logging
 
@@ -513,7 +513,6 @@ docs/reference/      # Instructor source dossier (provenance only)
 
 Internal design still required:
 
-- Concrete OpenRouter model IDs for both run configurations
 - Past-case listing/authentication/access policy beyond retrieval by known Case ID
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment configuration
@@ -524,6 +523,7 @@ Settled:
 - Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`)
 - Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
 - Retry/failure policy (this document; runtime implementation deferred)
+- Concrete OpenRouter model assignment for `SAME_MODEL` and `MIXED_MODELS`, plus a non-automatic standby pool (`lib/ai/configurations/`; rationale in [`docs/model-selection.md`](model-selection.md))
 
 Waiting on an explicit recorded contract:
 

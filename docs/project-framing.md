@@ -50,7 +50,6 @@ The following are out of scope for the MVP unless explicitly required later:
 Internal design work still required (not instructor-owned):
 
 - Exact advocate and judge response-contract fields
-- Concrete OpenRouter model IDs for `SAME_MODEL` and `MIXED_MODELS`
 - Runtime prompt composition details
 - Retry/attempt policy for failed model calls (must be settled before multi-agent execution)
 - Past-case listing, authentication, and public/private access beyond retrieval by known Case ID

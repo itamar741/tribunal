@@ -30,11 +30,11 @@ Completed and verified:
 - Instructor source dossier preserved as documentation/provenance at `docs/reference/tribunal-running-project-info-package.txt`. Runtime code does not import or read that file.
 - Seven instructor profiles version-controlled under `lib/ai/profiles/`: Jon Snow and Tyrion Lannister (defense), Daenerys Targaryen and Grey Worm (prosecution), and Aaron Barak, Menachem Elon, and Meir Shamgar (judges). Representative seats assign a procedural side only; the model reasons in character. Judge profiles are judicial-method simulations.
 - Provider-agnostic runtime prompt builders under `lib/ai/prompts/`: one representative builder and one judge builder. Trusted instructions/configuration are separated from untrusted charge-sheet and advocate content. Model IDs are not part of prompt construction.
+- Concrete OpenRouter model assignment under `lib/ai/configurations/`: one `SAME_MODEL` ID for all seven roles, seven distinct `MIXED_MODELS` IDs, and a standby pool that is not an automatic fallback. Canonical rationale: `docs/model-selection.md`.
 
 Not implemented:
 
 - AI execution against Tribunal Runs.
-- Concrete OpenRouter model configuration.
 - OpenRouter integration.
 - Token/cost aggregation services, retries, advocate/judge execution, and dual-run orchestration.
 - Tribunal result UI, past-Case listing, and deployment.
@@ -158,7 +158,7 @@ No real AI call or orchestration should proceed without runtime validators match
 - Completed (Phase 3B): stable identities for two defense advocates, two prosecution advocates, and three judges, linked to instructor profile text without model IDs.
 - Completed (Phase 3B): canonical instructor Case T-001 stored as a project fixture/reference. The dossier is treated as the canonical example, not a complete generic Markdown grammar.
 - Completed (Phase 3C): runtime prompts assembled in application code from the settled layer model (advocate and judge compositions in `docs/architecture.md`). Trusted instructions are separated from untrusted charge-sheet/advocate content. Builders are provider-agnostic and do not include model IDs.
-- Choose concrete OpenRouter models ourselves: one model for all seven agents in `SAME_MODEL`; seven different models in `MIXED_MODELS`.
+- Completed (Phase 3D): concrete OpenRouter models chosen ourselves: one model for all seven agents in `SAME_MODEL`; seven different models in `MIXED_MODELS`; standby IDs recorded but not used as automatic fallbacks. Rationale: `docs/model-selection.md`.
 - Keep model assignment in configuration, not orchestration branches.
 - Test schema acceptance/rejection with valid and invalid examples.
 - Test that `SAME_MODEL` assigns one model to all seven agents and `MIXED_MODELS` assigns seven distinct models.
@@ -183,7 +183,7 @@ Existing `lib/ai/contracts`, `lib/ai/profiles`, `lib/ai/prompts`, `lib/ai/config
 ### Dependencies / blockers
 
 - Prompt builders are in place under `lib/ai/prompts/`. They consume raw validated Markdown; do not invent a generic charge-sheet grammar from T-001.
-- Model selection is deferred to this phase but not yet chosen.
+- Model selection is recorded in `lib/ai/configurations/` with rationale in `docs/model-selection.md`.
 
 ## Phase 4A — Model-call audit persistence and Tribunal Run lifecycle
 
@@ -602,7 +602,6 @@ Phases 1–11, runtime contract implementation, encoded instructor profiles, and
 
 Internal design still required:
 
-- Concrete OpenRouter model IDs for `SAME_MODEL` and `MIXED_MODELS`
 - Past-Case public-list/authentication/access policy and safe list metadata; retrieval by known unique ID is settled
 - Retention/privacy rules for persisted validated Markdown text
 - Concrete deployment topology
@@ -613,6 +612,7 @@ Settled:
 - Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`, Phase 3C)
 - Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
 - Retry/failure policy (`docs/architecture.md`; runtime implementation deferred)
+- Concrete OpenRouter model assignment (`lib/ai/configurations/`, Phase 3D; rationale in `docs/model-selection.md`)
 
 Waiting on an explicit recorded contract:
 

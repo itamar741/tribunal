@@ -12,7 +12,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - Preserve the modular Tribunal architecture (`lib/tribunal`, `lib/ai/*`, `lib/db`, `lib/charge-sheet`, `lib/cases`, `lib/model-calls`).
 - Use one reusable Tribunal engine; do not duplicate `SAME_MODEL` and `MIXED_MODELS` workflow logic.
-- Keep model assignment in configuration, not orchestration branches.
+- Keep model assignment in configuration, not orchestration branches. Canonical rationale: `docs/model-selection.md`.
 - MVP charge sheets are `.md` only (read as UTF-8 text; do not parse or render Markdown); keep upload transport separate from validation/read and later pipeline stages; do not permanently store original uploads unless explicitly required.
 - Persist validated Markdown text on each new unique Case; store the original file name; never store the original file/blob; do not deduplicate uploads.
 - Create exactly one `SAME_MODEL` and one `MIXED_MODELS` Tribunal Run atomically with each Case; enforce unique `(case_id, run_type)` in PostgreSQL.

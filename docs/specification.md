@@ -72,7 +72,7 @@ When the MVP is complete, the following must be observable:
 - Use PostgreSQL (Supabase preferred) with version-controlled SQL migrations and server-side `pg` access; do not introduce an ORM without an explicit requirement.
 - Keep file processing, AI calls, prompts, profiles, model configuration, validation, and cost calculation on the server.
 - Use one reusable Tribunal engine; differentiate `SAME_MODEL` and `MIXED_MODELS` by configuration only.
-- Choose concrete models ourselves: one model for all seven agents in `SAME_MODEL`, seven different models in `MIXED_MODELS`.
+- Choose concrete models ourselves: one model for all seven agents in `SAME_MODEL`, seven different models in `MIXED_MODELS`. Canonical IDs and rationale: [`docs/model-selection.md`](model-selection.md); runtime assignment is `lib/ai/configurations/`.
 - Apply the settled majority-vote rule per run: three valid judge outputs; each judge returns `JUSTIFIED` or `NOT_JUSTIFIED`; ≥2 `JUSTIFIED` → `JUSTIFIED`; ≥2 `NOT_JUSTIFIED` → `NOT_JUSTIFIED`; a permanently failed judge yields no majority and a failed run. That majority is the run’s final verdict.
 - Treat each model API attempt as an immutable audit/accounting event; record OpenRouter-reported usage/cost; calculate aggregate totals from those records rather than unnecessarily duplicating stored totals.
 - Preserve a modular Tribunal execution service and begin with the simplest reliable Next.js-compatible execution path; add queue/background-job infrastructure only if measured runtime/deployment limits require it.
