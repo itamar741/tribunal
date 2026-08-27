@@ -40,6 +40,7 @@ export type JudgeResponse = z.infer<typeof judgeResponseSchema>;
 export type JudgeVerdict = z.infer<typeof judgeVerdictSchema>;
 
 export const ADVOCATE_RESPONSE_JSON_SCHEMA_NAME = "advocate_response";
+export const JUDGE_RESPONSE_JSON_SCHEMA_NAME = "judge_response";
 
 /**
  * JSON Schema derived from advocateResponseSchema for OpenRouter
@@ -61,6 +62,31 @@ export function advocateResponseJsonSchema(): Record<string, unknown> {
     const length = argumentsSchema.items.length;
     argumentsSchema.minItems = length;
     argumentsSchema.maxItems = length;
+  }
+
+  return schema;
+}
+
+/**
+ * JSON Schema derived from judgeResponseSchema for OpenRouter
+ * `response_format.json_schema`. Zod remains the authoritative validator.
+ */
+export function judgeResponseJsonSchema(): Record<string, unknown> {
+  const schema = z.toJSONSchema(judgeResponseSchema, {
+    target: "draft-07",
+    reused: "inline",
+  }) as Record<string, unknown>;
+
+  delete schema.$schema;
+
+  const properties = schema.properties as
+    | Record<string, Record<string, unknown>>
+    | undefined;
+  const reasonsSchema = properties?.key_reasons;
+  if (reasonsSchema && Array.isArray(reasonsSchema.items)) {
+    const length = reasonsSchema.items.length;
+    reasonsSchema.minItems = length;
+    reasonsSchema.maxItems = length;
   }
 
   return schema;

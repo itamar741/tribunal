@@ -37,8 +37,9 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run verify:openrouter-slice` | One live OpenRouter DEFENSE_1 attempt (requires `OPENROUTER_API_KEY`) |
 | `npm run verify:openrouter-retry` | Live bounded-retry DEFENSE_1 execution, at most two attempts (requires `OPENROUTER_API_KEY`) |
 | `npm run verify:openrouter-advocate-stage` | Live four-Advocate SAME_MODEL stage, at most eight attempts (requires `OPENROUTER_API_KEY`) |
+| `npm run verify:openrouter-judge-stage` | Live three-Judge SAME_MODEL stage with fixture advocates, at most six attempts (requires `OPENROUTER_API_KEY`) |
 | `npm run verify:openrouter-catalog` | Check configured model IDs against the live OpenRouter `/api/v1/models` catalog |
 
 ## Scope note
 
-Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, instructor agent profiles, provider-agnostic runtime prompt builders, version-controlled OpenRouter model assignment, a one-agent audited OpenRouter slice, bounded two-attempt representative retry, and the four-advocate parallel stage are implemented. Judges, majority, dual-run orchestration, and results UI are intentionally not implemented yet. Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).
+Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, instructor agent profiles, provider-agnostic runtime prompt builders, version-controlled OpenRouter model assignment, a one-agent audited OpenRouter slice, bounded two-attempt representative retry, the four-advocate parallel stage, and the three-judge parallel stage with two-of-three majority are implemented. Dual-run orchestration and results UI are intentionally not implemented yet. Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).

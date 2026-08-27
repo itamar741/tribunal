@@ -13,6 +13,7 @@
     "verify:openrouter-slice": "tsx scripts/verify-openrouter-slice.ts",
     "verify:openrouter-retry": "tsx scripts/verify-openrouter-retry.ts",
     "verify:openrouter-advocate-stage": "tsx scripts/verify-openrouter-advocate-stage.ts",
+    "verify:openrouter-judge-stage": "tsx scripts/verify-openrouter-judge-stage.ts",
     "verify:openrouter-catalog": "tsx scripts/verify-openrouter-catalog.ts"
   },
   "dependencies": {

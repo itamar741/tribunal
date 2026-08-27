@@ -37,6 +37,12 @@ export const JudgeRole = {
 
 export type JudgeRole = (typeof JudgeRole)[keyof typeof JudgeRole];
 
+export const JUDGE_ROLES_IN_ORDER = [
+  JudgeRole.JUDGE_1,
+  JudgeRole.JUDGE_2,
+  JudgeRole.JUDGE_3,
+] as const;
+
 export const AdvocateSide = {
   DEFENSE: "DEFENSE",
   PROSECUTION: "PROSECUTION",

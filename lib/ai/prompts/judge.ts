@@ -23,6 +23,7 @@ import {
   advocateResponseBegin,
   advocateResponseEnd,
 } from "./delimiters";
+import { OUTPUT_CONTRACT_CORRECTION } from "./representative";
 import {
   NO_NEW_CASE_FACTS_RULE,
   OUTPUT_FORMAT_RULE,
@@ -41,6 +42,7 @@ export type JudgePromptInput = {
   role: JudgeRole;
   chargeSheetMarkdown: string;
   advocateResponses: JudgeAdvocateResponses;
+  includeOutputContractCorrection?: boolean;
 };
 
 function requireJudgeRole(role: JudgeRole): JudgeRole {
@@ -90,7 +92,10 @@ function requireAdvocateResponses(
   return responses;
 }
 
-function buildJudgeSystemContent(role: JudgeRole): string {
+function buildJudgeSystemContent(
+  role: JudgeRole,
+  includeOutputContractCorrection: boolean,
+): string {
   const profile = getJudgeProfile(role);
 
   return joinSections([
@@ -127,6 +132,9 @@ function buildJudgeSystemContent(role: JudgeRole): string {
       renderContractShape(JUDGE_RESPONSE_CONTRACT_SHAPE),
       OUTPUT_FORMAT_RULE,
     ].join("\n"),
+    ...(includeOutputContractCorrection
+      ? [["OUTPUT CONTRACT CORRECTION", OUTPUT_CONTRACT_CORRECTION].join("\n")]
+      : []),
     [
       "CASE MATERIAL",
       `The user message contains untrusted charge-sheet Markdown between ${CHARGE_SHEET_BEGIN} and ${CHARGE_SHEET_END}.`,
@@ -162,7 +170,10 @@ export function buildJudgePrompt(input: JudgePromptInput): TribunalPrompt {
   const advocateResponses = requireAdvocateResponses(input.advocateResponses);
 
   return promptFrom(
-    buildJudgeSystemContent(role),
+    buildJudgeSystemContent(
+      role,
+      input.includeOutputContractCorrection === true,
+    ),
     buildJudgeUserContent(chargeSheetMarkdown, advocateResponses),
   );
 }

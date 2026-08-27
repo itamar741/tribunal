@@ -240,6 +240,24 @@ describe("buildJudgePrompt", () => {
     }
   });
 
+  it("may add a trusted output-contract correction without the invalid response", () => {
+    const baseline = buildJudgePrompt({
+      role: JudgeRole.JUDGE_1,
+      chargeSheetMarkdown: CHARGE_SHEET,
+      advocateResponses: advocateResponses(),
+    });
+    const corrected = buildJudgePrompt({
+      role: JudgeRole.JUDGE_1,
+      chargeSheetMarkdown: CHARGE_SHEET,
+      advocateResponses: advocateResponses(),
+      includeOutputContractCorrection: true,
+    });
+    assert.equal(systemContent(baseline).includes(OUTPUT_CONTRACT_CORRECTION), false);
+    assert.equal(systemContent(corrected).includes(OUTPUT_CONTRACT_CORRECTION), true);
+    assert.equal(systemContent(corrected).includes("{not json"), false);
+    assert.equal(userContent(baseline), userContent(corrected));
+  });
+
   it("does not include other judges' output or a precomputed majority", () => {
     const prompt = buildJudgePrompt({
       role: JudgeRole.JUDGE_1,

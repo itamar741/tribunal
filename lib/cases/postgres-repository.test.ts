@@ -71,6 +71,7 @@ const PHASE4A_FILE_PREFIX = "phase4a-verify-";
 const PHASE4B_FILE_PREFIX = "phase4b-verify-";
 const PHASE4C_FILE_PREFIX = "phase4c-verify-";
 const PHASE5_FILE_PREFIX = "phase5-verify-";
+const PHASE6_FILE_PREFIX = "phase6-verify-";
 
 function isCheckViolation(error: unknown): boolean {
   return error instanceof DatabaseError && error.code === "23514";
@@ -133,13 +134,14 @@ describe("PostgreSQL persistence", {
 }, () => {
   after(async () => {
     await query(
-      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3 or original_file_name like $4 or original_file_name like $5",
+      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3 or original_file_name like $4 or original_file_name like $5 or original_file_name like $6",
       [
         `${PHASE2_FILE_PREFIX}%`,
         `${PHASE4A_FILE_PREFIX}%`,
         `${PHASE4B_FILE_PREFIX}%`,
         `${PHASE4C_FILE_PREFIX}%`,
         `${PHASE5_FILE_PREFIX}%`,
+        `${PHASE6_FILE_PREFIX}%`,
       ],
     );
     await closePool();

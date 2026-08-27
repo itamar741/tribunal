@@ -33,12 +33,13 @@ Completed and verified:
 - Concrete OpenRouter model assignment under `lib/ai/configurations/`: one `SAME_MODEL` ID for all seven roles, seven distinct `MIXED_MODELS` IDs, and a standby pool that is not an automatic fallback. Canonical rationale: `docs/model-selection.md`.
 - One-agent OpenRouter vertical slice: representative prompt → one Chat Completions attempt → JSON parse → Advocate Zod validation → one `model_calls` audit row.
 - Bounded two-attempt representative retry: centralized retryability, injectable delay / capped Retry-After, same identity on retry, separate audit rows. Does not complete or fail the Tribunal Run.
-- Parallel Advocate stage under `lib/tribunal`: four representatives start concurrently, each with its own bounded retry. The stage succeeds only with four valid Advocate responses. One permanent failure marks that Tribunal Run `FAILED` and blocks judges. Judges, majority, dual-run orchestration, and aggregate accounting are not implemented.
+- Parallel Advocate stage under `lib/tribunal`: four representatives start concurrently, each with its own bounded retry. The stage succeeds only with four valid Advocate responses. One permanent failure marks that Tribunal Run `FAILED` and blocks judges.
+- Parallel Judge stage under `lib/tribunal`: three judges start concurrently, each with its own bounded retry. All three valid Judge responses are required. Majority consumes only validated verdicts. A 2-of-3 majority marks the Run `SUCCEEDED`. Permanent Judge failure marks `FAILED` with no majority. Dual-run orchestration and aggregate accounting are not implemented.
 
 Not implemented:
 
 - Full AI execution against Tribunal Runs.
-- Token/cost aggregation services, judge execution, majority calculation, and dual-run orchestration.
+- Token/cost aggregation services and dual-run orchestration.
 - Tribunal result UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
@@ -333,15 +334,14 @@ Judges depend on the complete advocate set, and majority calculation must consum
 
 ### Scope
 
-- Enforce the advocate-to-judge barrier.
-- Run exactly three configured judges concurrently.
-- Validate every response through the one judge contract.
-- Implement the pure two-of-three majority function.
-- Persist judge outputs and a majority only after three valid votes.
-- Derive per-judge and judge-stage token/cost totals from call records.
-- Derive complete Tribunal Run totals as advocate-stage plus judge-stage totals.
-- Fail closed when any required judge result remains invalid/missing.
-- Test all vote combinations, stage ordering, failures, and accounting reconciliation.
+- Completed: Judge attempt and bounded retry reuse the existing transport and `classifyRetry()`.
+- Completed: three configured judges start concurrently.
+- Completed: validate every response through the one judge contract.
+- Completed: pure two-of-three majority function from validated verdicts only.
+- Completed: persist judge outputs and a majority only after three valid votes; mark the Run `SUCCEEDED`.
+- Deferred: per-judge, judge-stage, and complete-run token/cost aggregation services.
+- Completed: fail closed when any required judge result remains invalid/missing; mark the Run `FAILED` with no majority.
+- Completed: vote-combination, concurrency, and fail-closed tests. Accounting reconciliation is deferred.
 
 ### Explicitly out of scope
 
