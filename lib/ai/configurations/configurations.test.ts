@@ -116,7 +116,7 @@ describe("MIXED_MODELS assignment", () => {
     assert.equal(modelIds.length, 7);
     assert.equal(new Set(modelIds).size, 7);
     assert.deepEqual(MIXED_MODELS_BY_ROLE, {
-      [TribunalAgentRole.DEFENSE_1]: "nvidia/nemotron-3.5-lightning:free",
+      [TribunalAgentRole.DEFENSE_1]: "dots-studio/dots-3-note-preview:free",
       [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
       [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
@@ -165,10 +165,21 @@ describe("model-selection constraints", () => {
       "nvidia/nemotron-3-ultra-550b-a55b:free",
       "google/gemma-4-31b-it:free",
       "thinkingmachines/inkling-small:free",
+      "nvidia/nemotron-3.5-lightning:free",
     ]);
     assert.equal(
       STANDBY_MODEL_IDS.includes("poolside/laguna-s-2.1:free"),
       false,
+    );
+    assert.equal(
+      (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
+        "nvidia/nemotron-3.5-lightning:free",
+      ),
+      false,
+    );
+    assert.equal(
+      MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
+      "dots-studio/dots-3-note-preview:free",
     );
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.PROSECUTION_1],
@@ -180,7 +191,7 @@ describe("model-selection constraints", () => {
       ),
       false,
     );
-    assert.equal(STANDBY_MODEL_IDS.length, 3);
+    assert.equal(STANDBY_MODEL_IDS.length, 4);
     assert.equal(new Set(STANDBY_MODEL_IDS).size, STANDBY_MODEL_IDS.length);
 
     const resolved = Object.values(TribunalAgentRole).flatMap((role) =>
@@ -296,7 +307,11 @@ describe("model output modes", () => {
       getOutputModeForModel(
         MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
       ),
-      ModelOutputMode.PROMPT_ONLY,
+      ModelOutputMode.JSON_SCHEMA,
+    );
+    assert.equal(
+      getOutputModeForModel("dots-studio/dots-3-note-preview:free"),
+      ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
       getOutputModeForModel(

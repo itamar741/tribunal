@@ -108,7 +108,7 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 
 | Tribunal role | Concrete model ID | Provider / family | Free | Context size | Structured-output level | Selection rationale / tradeoff |
 | --- | --- | --- | --- | --- | --- | --- |
-| `DEFENSE_1` | `nvidia/nemotron-3.5-lightning:free` | NVIDIA Nemotron 3.5 Lightning | `:free` | 1M (1,000,000) | `PROMPT_ONLY` | Replaces Inkling after a hard deployed 403 (agentic-harness-only). Distinct from `JUDGE_2` Nemotron Super. Tradeoff: no `response_format`; JSON parse + Zod required. |
+| `DEFENSE_1` | `dots-studio/dots-3-note-preview:free` | Dots Studio Dots3-Note Preview | `:free` | 512K (512,000) | `JSON_SCHEMA` | Replaces Nemotron 3.5 Lightning after a deployed TIMEOUT then `MALFORMED_JSON`. Live catalog lists `response_format` and `structured_outputs`. Temporary: free endpoint expires 2026-09-30. |
 | `DEFENSE_2` | `minimax/minimax-m2.7:free` | MiniMax M2.7 | `:free` | 192K (196,608) | `JSON_OBJECT` | Different MiniMax generation from M3. Tradeoff: smaller window than M3; structure is JSON mode, not JSON Schema. |
 | `PROSECUTION_1` | `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 | `:free` | 256K (262,144) | `PROMPT_ONLY` | Promoted from standby after Gemma 4 31B returned provider 429s on both allowed attempts. Tradeoff: no `response_format`; JSON parse + Zod required. |
 | `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
@@ -136,14 +136,43 @@ The first production Case completed correctly at the system level: both Runs sta
 
 The replacements below are an explicit versioned configuration change before the next fresh Case. They are not runtime fallback and do not alter retry policy.
 
-### Why MIXED `DEFENSE_1` is Nemotron 3.5 Lightning
+### Why MIXED `DEFENSE_1` was Nemotron 3.5 Lightning
 
-`nvidia/nemotron-3.5-lightning:free` was selected because:
+`nvidia/nemotron-3.5-lightning:free` was selected after the Inkling 403 because:
 
 - the live `/api/v1/models` catalog listed the exact ID with zero prompt/completion prices;
 - the catalog listed neither `response_format` nor `structured_outputs` (`PROMPT_ONLY`);
 - it is a distinct concrete ID from `JUDGE_2` (`nvidia/nemotron-3-super-120b-a12b:free`);
 - the catalog did not mark it as agentic-harness-only (unlike the Inkling 403).
+
+That selection remains historically correct. It is no longer the primary mixed defense ID.
+
+### Second deployed dual-run E2E (2026-08-27)
+
+`SAME_MODEL` (`minimax/minimax-m3:free`) completed a full successful 7-agent Run. All seven seats succeeded on attempt 1. SAME_MODEL is accepted and was not changed.
+
+`MIXED_MODELS`:
+
+- `DEFENSE_2` `minimax/minimax-m2.7:free` succeeded.
+- `PROSECUTION_1` `poolside/laguna-s-2.1:free` succeeded.
+- `PROSECUTION_2` `minimax/minimax-m3:free` succeeded.
+- `DEFENSE_1` `nvidia/nemotron-3.5-lightning:free` failed permanently: attempt 1 `TIMEOUT` after 90,000 ms; attempt 2 returned provider usage but `MALFORMED_JSON`. The Run correctly failed before Judges.
+
+Lightning was therefore removed from the primary MIXED assignment and recorded as standby only. No automatic fallback occurred.
+
+### Why MIXED `DEFENSE_1` is Dots3-Note Preview
+
+`dots-studio/dots-3-note-preview:free` was selected only after live `/api/v1/models` verification:
+
+- exact ID present;
+- `pricing.prompt = 0` and `pricing.completion = 0`;
+- 512K context (512,000 tokens);
+- catalog listed both `response_format` and `structured_outputs` → configured `JSON_SCHEMA`;
+- not marked agentic-harness-only.
+
+The OpenRouter catalog and model page schedule this free endpoint to go away on **2026-09-30**. That is acceptable for the current course MVP and final E2E. It is not a durable long-term production model and must be revisited after that date.
+
+This is an explicit versioned configuration change before a fresh Case. It is not runtime fallback.
 
 ### Why MIXED `PROSECUTION_1` is Laguna S 2.1
 
@@ -173,6 +202,7 @@ Currently approved emergency candidates, in recorded order:
 1. `nvidia/nemotron-3-ultra-550b-a55b:free` — larger Nemotron 3 sibling; 1M context; catalog listed neither `response_format` nor `structured_outputs`.
 2. `google/gemma-4-31b-it:free` — demoted from `MIXED_MODELS` `PROSECUTION_1` after both allowed attempts returned provider 429s in the 2026-08-27 deployed E2E. The ID remains a valid free catalog endpoint.
 3. `thinkingmachines/inkling-small:free` — smaller Inkling sibling; 1M context; prompt-enforced structure only.
+4. `nvidia/nemotron-3.5-lightning:free` — demoted from `MIXED_MODELS` `DEFENSE_1` after the second deployed E2E: attempt 1 `TIMEOUT`, attempt 2 `MALFORMED_JSON`. Prompt-enforced structure only. Not used automatically.
 
 `nvidia/nemotron-3-super-120b-a12b:free` remains a primary `MIXED_MODELS` `JUDGE_2` ID and is not a standby candidate. Standby IDs are classified `PROMPT_ONLY` from the same catalog snapshot.
 
@@ -221,6 +251,13 @@ Free endpoints can differ from paid endpoints — and from each other — in log
 This document does not resolve the project’s broader retention/privacy decision for persisted charge-sheet text.
 
 ## Research snapshot
+
+**Research snapshot: 2026-08-27 (MIXED `DEFENSE_1` revised to Dots3 after second deployed E2E)**
+
+- `SAME_MODEL` `minimax/minimax-m3:free` completed all seven agents on attempt 1.
+- MIXED `DEFENSE_1` `nvidia/nemotron-3.5-lightning:free` failed: attempt 1 `TIMEOUT` (90,000 ms), attempt 2 `MALFORMED_JSON`. Demoted to standby.
+- Later proposed `:free` IDs `openai/gpt-oss-120b:free` and `qwen/qwen-2.5-7b-instruct:free` were absent from the live catalog and were not selected.
+- `dots-studio/dots-3-note-preview:free` was present with `pricing.prompt = 0`, `pricing.completion = 0`, `response_format`, `structured_outputs`, 512K context, and `expiration_date = 2026-09-30`. Configured `JSON_SCHEMA`. Temporary MVP/E2E choice only.
 
 **Research snapshot: 2026-08-27 (MIXED seats revised after first deployed dual-run E2E)**
 

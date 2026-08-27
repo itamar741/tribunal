@@ -412,7 +412,7 @@ describe("executeRepresentativeAttempt", () => {
     assert.deepEqual(order, ["running", "transport"]);
   });
 
-  it("derives PROMPT_ONLY for MIXED DEFENSE_1 and still fails closed on bad JSON", async () => {
+  it("derives JSON_SCHEMA for MIXED DEFENSE_1 and still fails closed on bad JSON", async () => {
     let captured: OpenRouterChatCompletionInput | undefined;
     const result = await executeRepresentativeAttempt(
       {
@@ -432,8 +432,8 @@ describe("executeRepresentativeAttempt", () => {
         },
       },
     );
-    assert.equal(captured?.model, "nvidia/nemotron-3.5-lightning:free");
-    assert.equal(captured?.output.mode, ModelOutputMode.PROMPT_ONLY);
+    assert.equal(captured?.model, "dots-studio/dots-3-note-preview:free");
+    assert.equal(captured?.output.mode, ModelOutputMode.JSON_SCHEMA);
     assert.equal(result.record.status, ModelCallStatus.FAILED);
     assert.equal(result.record.errorType, AttemptErrorType.MALFORMED_JSON);
     assert.equal(result.record.validatedResponse, null);
@@ -454,6 +454,10 @@ describe("outputStrategyForModel", () => {
     assert.deepEqual(outputStrategyForModel("minimax/minimax-m3:free", schema), {
       mode: "JSON_OBJECT",
     });
+    assert.deepEqual(
+      outputStrategyForModel("dots-studio/dots-3-note-preview:free", schema),
+      { mode: "JSON_SCHEMA", jsonSchema: schema },
+    );
     assert.deepEqual(
       outputStrategyForModel("nvidia/nemotron-3.5-lightning:free", schema),
       { mode: "PROMPT_ONLY" },
