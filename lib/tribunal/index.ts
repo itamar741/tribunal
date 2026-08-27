@@ -9,7 +9,18 @@
  * - Each run calculates its own majority verdict.
  * - AI failures must never silently become valid verdicts.
  *
- * Not implemented in this foundation phase.
+ * The Advocate stage is implemented. Judges, majority, and dual-run
+ * orchestration are not.
  */
 
-export {};
+export { executeAdvocateStage } from "./execute-advocate-stage";
+export type {
+  AdvocateStageAgentFailure,
+  AdvocateStageAgentMeta,
+  AdvocateStageFailure,
+  AdvocateStageResult,
+  AdvocateStageRunRepository,
+  AdvocateStageSuccess,
+  ExecuteAdvocateStageDeps,
+  ExecuteAdvocateStageInput,
+} from "./execute-advocate-stage";

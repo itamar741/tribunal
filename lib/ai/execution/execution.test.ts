@@ -335,6 +335,31 @@ describe("executeRepresentativeAttempt", () => {
     }
   });
 
+  it("skips markRunning when the caller owns run lifecycle", async () => {
+    const marked: string[] = [];
+    await executeRepresentativeAttempt(
+      {
+        caseId: "case-skip-running",
+        runId: "run-skip-running",
+        runKind: TribunalRunKind.SAME_MODEL,
+        role: RepresentativeRole.DEFENSE_1,
+        chargeSheetMarkdown: "# Case\n\nFacts.",
+        apiKey: "test-key",
+      },
+      {
+        modelCalls: new MemoryModelCalls(),
+        runs: {
+          async markRunning(runId) {
+            marked.push(runId);
+          },
+        },
+        skipMarkRunning: true,
+        completeChat: async () => successTransport(),
+      },
+    );
+    assert.deepEqual(marked, []);
+  });
+
   it("does not mark the run running again on attempt 2", async () => {
     const marked: string[] = [];
     await executeRepresentativeAttempt(

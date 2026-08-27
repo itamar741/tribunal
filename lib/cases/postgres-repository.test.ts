@@ -17,7 +17,9 @@ import {
   withTransaction,
 } from "../db";
 import { executeRepresentativeAttempt } from "../ai/execution";
+import { OpenRouterTransportErrorType } from "../ai/openrouter";
 import { RepresentativeRole } from "../ai/profiles";
+import { executeAdvocateStage } from "../tribunal";
 import { PostgresModelCallRepository } from "../model-calls";
 import {
   ModelCallAgentRole,
@@ -68,6 +70,7 @@ const PHASE2_FILE_PREFIX = "phase2-verify-";
 const PHASE4A_FILE_PREFIX = "phase4a-verify-";
 const PHASE4B_FILE_PREFIX = "phase4b-verify-";
 const PHASE4C_FILE_PREFIX = "phase4c-verify-";
+const PHASE5_FILE_PREFIX = "phase5-verify-";
 
 function isCheckViolation(error: unknown): boolean {
   return error instanceof DatabaseError && error.code === "23514";
@@ -130,12 +133,13 @@ describe("PostgreSQL persistence", {
 }, () => {
   after(async () => {
     await query(
-      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3 or original_file_name like $4",
+      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3 or original_file_name like $4 or original_file_name like $5",
       [
         `${PHASE2_FILE_PREFIX}%`,
         `${PHASE4A_FILE_PREFIX}%`,
         `${PHASE4B_FILE_PREFIX}%`,
         `${PHASE4C_FILE_PREFIX}%`,
+        `${PHASE5_FILE_PREFIX}%`,
       ],
     );
     await closePool();
@@ -971,6 +975,95 @@ describe("PostgreSQL persistence", {
       assert.ok(run);
       assert.equal(run.status, TribunalRunStatus.RUNNING);
       assert.equal(run.finalVerdict, null);
+    });
+  });
+
+  describe("Phase 5 advocate stage", () => {
+    it("marks the run FAILED when one mocked representative permanently fails", async () => {
+      const cases = new PostgresCaseRepository();
+      const runs = new PostgresTribunalRunRepository();
+      const modelCalls = new PostgresModelCallRepository();
+      const created = await cases.create({
+        originalFileName: `${PHASE5_FILE_PREFIX}mocked-fail.md`,
+        chargeSheetText: "# Case T-TEST\n\nThe accused killed the deceased.",
+      });
+      const sameModelRun = created.runs.find(
+        (run) => run.runType === TribunalRunKind.SAME_MODEL,
+      );
+      assert.ok(sameModelRun);
+
+      const result = await executeAdvocateStage(
+        {
+          caseId: created.id,
+          runId: sameModelRun.id,
+          runKind: TribunalRunKind.SAME_MODEL,
+          chargeSheetMarkdown: created.chargeSheetText,
+          apiKey: "unused-in-mocked-transport",
+        },
+        {
+          modelCalls,
+          runs,
+          completeChat: async (input) => {
+            const system = input.messages.find((message) => message.role === "system");
+            if (system?.content.includes("Seat: DEFENSE_2")) {
+              return {
+                ok: false,
+                errorType: OpenRouterTransportErrorType.HTTP_ERROR,
+                errorMessage: "OpenRouter HTTP 401",
+                httpStatus: 401,
+                retryAfterHeader: null,
+                errorCode: null,
+                providerErrorType: null,
+                providerCode: null,
+                finishReason: null,
+                nativeFinishReason: null,
+                envelopeKind: null,
+                generationId: null,
+                shape: null,
+                routing: null,
+                content: null,
+                returnedModel: null,
+                providerCallId: null,
+                usage: {
+                  promptTokens: null,
+                  completionTokens: null,
+                  totalTokens: null,
+                  totalCost: null,
+                },
+                durationMs: 12,
+              };
+            }
+            return {
+              ok: true,
+              content: JSON.stringify(advocateResponse()),
+              returnedModel: "minimax/minimax-m3:free",
+              providerCallId: "gen-phase5-mock",
+              generationId: null,
+              usage: {
+                promptTokens: 8,
+                completionTokens: 4,
+                totalTokens: 12,
+                totalCost: "0",
+              },
+              durationMs: 30,
+            };
+          },
+        },
+      );
+
+      assert.equal(result.ok, false);
+      if (!result.ok) {
+        assert.deepEqual(result.failedRoles, [RepresentativeRole.DEFENSE_2]);
+      }
+
+      const run = await runs.getById(sameModelRun.id);
+      assert.ok(run);
+      assert.equal(run.status, TribunalRunStatus.FAILED);
+      assert.equal(run.finalVerdict, null);
+      assert.match(run.failureReason ?? "", /DEFENSE_2/);
+
+      const stored = await modelCalls.listByRunId(sameModelRun.id);
+      assert.equal(stored.length, 4);
     });
   });
 });

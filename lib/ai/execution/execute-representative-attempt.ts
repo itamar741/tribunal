@@ -52,6 +52,8 @@ export type ExecuteRepresentativeAttemptDeps = {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   now?: () => number;
+  /** When true, the caller owns marking the Tribunal Run RUNNING. */
+  skipMarkRunning?: boolean;
 };
 
 export type RepresentativeAttemptFailure = {
@@ -100,7 +102,7 @@ export async function executeRepresentativeAttempt(
     includeOutputContractCorrection: input.includeOutputContractCorrection,
   });
 
-  if (attempt === 1) {
+  if (attempt === 1 && !deps.skipMarkRunning) {
     await deps.runs.markRunning(input.runId);
   }
 

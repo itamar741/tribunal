@@ -32,12 +32,13 @@ Completed and verified:
 - Provider-agnostic runtime prompt builders under `lib/ai/prompts/`: one representative builder and one judge builder. Trusted instructions/configuration are separated from untrusted charge-sheet and advocate content. Model IDs are not part of prompt construction.
 - Concrete OpenRouter model assignment under `lib/ai/configurations/`: one `SAME_MODEL` ID for all seven roles, seven distinct `MIXED_MODELS` IDs, and a standby pool that is not an automatic fallback. Canonical rationale: `docs/model-selection.md`.
 - One-agent OpenRouter vertical slice: representative prompt → one Chat Completions attempt → JSON parse → Advocate Zod validation → one `model_calls` audit row.
-- Bounded two-attempt representative retry: centralized retryability, injectable delay / capped Retry-After, same identity on retry, separate audit rows. Does not complete or fail the Tribunal Run. Remaining agents, judges, majority, and dual-run orchestration are not implemented.
+- Bounded two-attempt representative retry: centralized retryability, injectable delay / capped Retry-After, same identity on retry, separate audit rows. Does not complete or fail the Tribunal Run.
+- Parallel Advocate stage under `lib/tribunal`: four representatives start concurrently, each with its own bounded retry. The stage succeeds only with four valid Advocate responses. One permanent failure marks that Tribunal Run `FAILED` and blocks judges. Judges, majority, dual-run orchestration, and aggregate accounting are not implemented.
 
 Not implemented:
 
 - Full AI execution against Tribunal Runs.
-- Token/cost aggregation services, four-advocate/judge execution, and dual-run orchestration.
+- Token/cost aggregation services, judge execution, majority calculation, and dual-run orchestration.
 - Tribunal result UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
@@ -291,15 +292,14 @@ The one-call boundary is proven; the advocate stage is the smallest independent 
 
 ### Scope
 
-- Implement the reusable engine entry point under `lib/tribunal` with injected configuration and call dependency.
-- Run two defense and two prosecution advocates concurrently.
-- Supply each call the same Case charge-sheet content plus configured profile, constructed prompt, and model.
-- Validate every response through the single advocate contract.
-- Persist outputs and individual attempt records.
-- Derive per-agent totals from all attempts.
-- Derive advocate-stage token/cost totals for the Tribunal Run from call records.
-- If any advocate lacks a valid result after allowed attempts, do not start judges and mark the run failed.
-- Test concurrency and fail-closed behavior with deterministic fakes.
+- Completed: reusable Advocate-stage entry point under `lib/tribunal`.
+- Completed: two defense and two prosecution advocates start concurrently.
+- Completed: each agent receives the same charge-sheet text plus its configured profile, constructed prompt, and model via the existing representative executor.
+- Completed: validate every response through the single advocate contract.
+- Completed: persist outputs and individual attempt records on `model_calls`.
+- Deferred: per-agent and advocate-stage token/cost aggregation services.
+- Completed: if any advocate lacks a valid result after allowed attempts, do not start judges and mark the run failed.
+- Completed: concurrency and fail-closed tests with deterministic fakes.
 
 ### Explicitly out of scope
 

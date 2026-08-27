@@ -350,7 +350,7 @@ SQLite can work for local experiments, but the settled deployment target is a ho
 
 ### OpenRouter
 
-OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). A server-only Chat Completions adapter, one-agent audited attempt, and bounded two-attempt representative retry exist under `lib/ai/openrouter/` and `lib/ai/execution/`. Full advocate/judge orchestration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
+OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). A server-only Chat Completions adapter, one-agent audited attempt, and bounded two-attempt representative retry exist under `lib/ai/openrouter/` and `lib/ai/execution/`. The four-advocate parallel stage is implemented under `lib/tribunal`. Judges, majority, and dual-run orchestration are **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
 
 Structured-output request shape is selected from version-controlled model configuration (`JSON_SCHEMA`, `JSON_OBJECT`, or `PROMPT_ONLY`). The transport does not infer capability from the live catalog during a Tribunal Run. Provider-side JSON Schema or JSON mode is an aid only. Every successful Model Call still requires assistant text, JSON parse, and Zod validation. Malformed JSON is not repaired.
 
@@ -427,7 +427,7 @@ Tribunal execution remains a modular server-side application service independent
 
 Invalid uploads, processing failures, timeouts, malformed responses, and partial run failures must surface as failures. They must **not** be coerced into successful majority verdicts.
 
-Retry/attempt behavior is settled below. Bounded runtime retry for a single representative is implemented under `lib/ai/execution/`. It does not mark the Tribunal Run `SUCCEEDED` or `FAILED`; a later stage coordinator owns run completion. Full advocate-stage, judge, and dual-run orchestration are not implemented.
+Retry/attempt behavior is settled below. Bounded runtime retry for a single representative is implemented under `lib/ai/execution/`. It does not mark the Tribunal Run `SUCCEEDED` or `FAILED`. The Advocate-stage coordinator under `lib/tribunal` marks a run `FAILED` when any representative permanently fails. A successful advocate stage leaves the run `RUNNING`. Judges, majority, and dual-run orchestration are not implemented.
 
 ### Maximum attempts
 

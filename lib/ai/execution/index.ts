@@ -1,9 +1,10 @@
 /**
  * Server-only representative execution.
  *
- * One-attempt and bounded two-attempt helpers. Does not orchestrate
- * the full Advocate stage, judges, majority, or dual runs. Does not
- * mark a Tribunal Run SUCCEEDED or FAILED.
+ * One-attempt and bounded two-attempt helpers. The Advocate stage
+ * coordinator lives under lib/tribunal. These helpers do not run
+ * judges, majority, or dual runs, and do not mark a Tribunal Run
+ * SUCCEEDED or FAILED.
  */
 
 export { executeRepresentativeAttempt } from "./execute-representative-attempt";
