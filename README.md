@@ -10,6 +10,7 @@ Next.js modular monolith for dual AI Tribunal analysis of an uploaded charge she
 - [Implementation plan](docs/implementation-plan.md)
 - [Model selection](docs/model-selection.md)
 - [Database](docs/database.md)
+- [Deployment](docs/deployment.md)
 
 ## Getting started
 
@@ -43,4 +44,4 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scope note
 
-Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, instructor agent profiles, provider-agnostic runtime prompt builders, version-controlled OpenRouter model assignment, a one-agent audited OpenRouter slice, bounded two-attempt representative retry, the four-advocate parallel stage, the three-judge parallel stage with two-of-three majority, single-run orchestration (`executeTribunalRun`), Case-level dual-run orchestration (`executeCaseTribunals`), persisted results/accounting (`getCaseResults`), HTTP execute/results routes, and the reviewer UI (upload → execute → persisted results, plus retrieval by Case ID) are implemented. Deployment and final live dual-run E2E are intentionally not implemented yet. Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).
+Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, instructor agent profiles, provider-agnostic runtime prompt builders, version-controlled OpenRouter model assignment, a one-agent audited OpenRouter slice, bounded two-attempt representative retry, the four-advocate parallel stage, the three-judge parallel stage with two-of-three majority, single-run orchestration (`executeTribunalRun`), Case-level dual-run orchestration (`executeCaseTribunals`), persisted results/accounting (`getCaseResults`), HTTP execute/results routes, and the reviewer UI (upload → execute → persisted results, plus retrieval by Case ID) are implemented. Deployment preflight is recorded in [docs/deployment.md](docs/deployment.md). Production deploy and final live dual-run E2E are intentionally not implemented yet. Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).
