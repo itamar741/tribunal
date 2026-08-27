@@ -740,6 +740,7 @@ describe("completeChat", () => {
     }
     assert.equal(result.errorType, OpenRouterTransportErrorType.HTTP_ERROR);
     assert.equal(result.httpStatus, 429);
+    assert.equal(result.retryAfterHeader, "12");
     assert.equal(result.errorCode, "429");
     assert.equal(result.providerErrorType, "rate_limit_exceeded");
     assert.equal(result.providerCode, "429");

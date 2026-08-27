@@ -99,6 +99,7 @@ export type OpenRouterChatCompletionFailure = {
   errorType: OpenRouterTransportErrorType;
   errorMessage: string;
   httpStatus: number | null;
+  retryAfterHeader?: string | null;
   errorCode: string | null;
   providerErrorType: string | null;
   providerCode: string | null;

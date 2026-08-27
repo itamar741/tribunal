@@ -7,7 +7,7 @@ import {
   type OpenRouterChatCompletionResult,
   type OpenRouterClientOptions,
 } from "./types";
-import { parseOpenRouterHttpError } from "./http-error";
+import { parseOpenRouterHttpError, readRetryAfterHeader } from "./http-error";
 import {
   formatInvalidResponseMessage,
   formatProviderResponseError,
@@ -28,6 +28,7 @@ function isAbortError(error: unknown): boolean {
 
 function failureFields() {
   return {
+    retryAfterHeader: null as string | null,
     errorCode: null as string | null,
     providerErrorType: null as string | null,
     providerCode: null as string | null,
@@ -123,6 +124,7 @@ export async function completeChat(
         errorType: OpenRouterTransportErrorType.HTTP_ERROR,
         errorMessage: detail.errorMessage,
         httpStatus: response.status,
+        retryAfterHeader: readRetryAfterHeader(response.headers),
         errorCode: detail.errorCode,
         providerErrorType: detail.providerErrorType,
         providerCode: detail.providerCode,
@@ -149,6 +151,7 @@ export async function completeChat(
         errorType: OpenRouterTransportErrorType.PROVIDER_RESPONSE_ERROR,
         errorMessage: formatProviderResponseError(completion),
         httpStatus: response.status,
+        retryAfterHeader: readRetryAfterHeader(response.headers),
         errorCode: providerError.errorCode,
         providerErrorType: providerError.providerErrorType,
         providerCode: providerError.providerCode,
@@ -172,6 +175,7 @@ export async function completeChat(
         errorType: OpenRouterTransportErrorType.INVALID_RESPONSE,
         errorMessage: formatInvalidResponseMessage(completion),
         httpStatus: response.status,
+        retryAfterHeader: readRetryAfterHeader(response.headers),
         errorCode: null,
         providerErrorType: null,
         providerCode: null,

@@ -63,6 +63,13 @@ export function readWhitelistedMetadata(metadata: unknown): {
   };
 }
 
+export function readRetryAfterHeader(headers?: Headers): string | null {
+  if (!headers) {
+    return null;
+  }
+  return readSafeToken(headers.get("retry-after"));
+}
+
 function readRateLimitHint(headers?: Headers): string | null {
   if (!headers) {
     return null;

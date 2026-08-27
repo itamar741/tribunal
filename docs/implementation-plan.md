@@ -25,18 +25,19 @@ Completed and verified:
 - Supabase PostgreSQL TLS with official CA and certificate verification enabled (`certs/prod-ca-2021.crt`).
 - Settled advocate and judge response-contract logical shapes and runtime prompt-composition design (`docs/architecture.md`).
 - Runtime Zod validators under `lib/ai/contracts/` for advocate and judge responses (trimmed non-empty strings; extra fields forbidden).
-- Settled retry/failure policy (`docs/architecture.md`): at most two attempts per agent; independent run failure; no majority from incomplete stages. Runtime retry is not implemented yet.
+- Settled retry/failure policy (`docs/architecture.md`): at most two attempts per agent; independent run failure; no majority from incomplete stages. Bounded runtime retry for one representative is implemented under `lib/ai/execution/`.
 - Canonical instructor Case T-001 charge sheet stored as a project fixture/reference (`fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`). T-001 is the canonical example, not a generic Markdown grammar.
 - Instructor source dossier preserved as documentation/provenance at `docs/reference/tribunal-running-project-info-package.txt`. Runtime code does not import or read that file.
 - Seven instructor profiles version-controlled under `lib/ai/profiles/`: Jon Snow and Tyrion Lannister (defense), Daenerys Targaryen and Grey Worm (prosecution), and Aaron Barak, Menachem Elon, and Meir Shamgar (judges). Representative seats assign a procedural side only; the model reasons in character. Judge profiles are judicial-method simulations.
 - Provider-agnostic runtime prompt builders under `lib/ai/prompts/`: one representative builder and one judge builder. Trusted instructions/configuration are separated from untrusted charge-sheet and advocate content. Model IDs are not part of prompt construction.
 - Concrete OpenRouter model assignment under `lib/ai/configurations/`: one `SAME_MODEL` ID for all seven roles, seven distinct `MIXED_MODELS` IDs, and a standby pool that is not an automatic fallback. Canonical rationale: `docs/model-selection.md`.
-- One-agent OpenRouter vertical slice: representative prompt → one Chat Completions attempt → JSON parse → Advocate Zod validation → one `model_calls` audit row. No retry, remaining agents, judges, majority, or dual-run orchestration.
+- One-agent OpenRouter vertical slice: representative prompt → one Chat Completions attempt → JSON parse → Advocate Zod validation → one `model_calls` audit row.
+- Bounded two-attempt representative retry: centralized retryability, injectable delay / capped Retry-After, same identity on retry, separate audit rows. Does not complete or fail the Tribunal Run. Remaining agents, judges, majority, and dual-run orchestration are not implemented.
 
 Not implemented:
 
 - Full AI execution against Tribunal Runs.
-- Token/cost aggregation services, retries, four-advocate/judge execution, and dual-run orchestration.
+- Token/cost aggregation services, four-advocate/judge execution, and dual-run orchestration.
 - Tribunal result UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
@@ -255,6 +256,7 @@ One controlled call isolates gateway authentication, structured output, runtime 
 - Persist validated structured output separately from audit metadata.
 - Completed (Phase 4B): begin with no hidden automatic retry; one invocation means one audited attempt until retry policy is implemented.
 - Completed (Phase 4B): add fake-provider tests and a controlled live smoke-test procedure (`npm run verify:openrouter-slice`).
+- Completed (Phase 4C): implement bounded two-attempt retry around one representative (`executeRepresentativeWithRetry`). Live check: `npm run verify:openrouter-retry`.
 
 ### Explicitly out of scope
 
@@ -376,7 +378,7 @@ Single-run behavior and accounting are proven before coordinating fourteen basel
 - Add a Case execution service that invokes the same engine twice with configuration data.
 - Start `SAME_MODEL` and `MIXED_MODELS` concurrently.
 - Persist stage progress, outputs, majorities, failures, and timestamps incrementally.
-- Implement the bounded retry policy documented in `docs/architecture.md`.
+- Use the existing per-agent bounded retry primitive (`lib/ai/execution/`) when coordinating both runs.
 - Record every retry as another real attempt with the next attempt number.
 - Preserve failed attempts and their usage/cost.
 - Protect against accidental duplicate execution/idempotency failures.
@@ -611,7 +613,7 @@ Settled:
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
 - Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`, Phase 3C)
 - Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
-- Retry/failure policy (`docs/architecture.md`; runtime implementation deferred)
+- Retry/failure policy (`docs/architecture.md`; single-representative runtime retry is implemented)
 - Concrete OpenRouter model assignment (`lib/ai/configurations/`, Phase 3D; rationale in `docs/model-selection.md`)
 
 Waiting on an explicit recorded contract:

@@ -41,6 +41,7 @@ export type ExecuteRepresentativeAttemptInput = {
   role: RepresentativeRole;
   chargeSheetMarkdown: string;
   attempt?: ModelCallAttempt;
+  includeOutputContractCorrection?: boolean;
   apiKey: string;
 };
 
@@ -53,10 +54,18 @@ export type ExecuteRepresentativeAttemptDeps = {
   now?: () => number;
 };
 
+export type RepresentativeAttemptFailure = {
+  errorType: string;
+  errorMessage: string;
+  httpStatus: number | null;
+  retryAfterHeader: string | null;
+};
+
 export type RepresentativeAttemptResult = {
   record: ModelCallRecord;
   response: AdvocateResponse | null;
   returnedModel: string | null;
+  failure: RepresentativeAttemptFailure | null;
 };
 
 function requireRepresentativeRole(role: RepresentativeRole): RepresentativeRole {
@@ -64,6 +73,14 @@ function requireRepresentativeRole(role: RepresentativeRole): RepresentativeRole
     throw new Error(`Invalid representative role: ${String(role)}`);
   }
   return role;
+}
+
+function requireAttempt(attempt: ModelCallAttempt | undefined): ModelCallAttempt {
+  const value = attempt ?? 1;
+  if (value !== 1 && value !== 2) {
+    throw new Error(`Invalid model-call attempt: ${String(value)}`);
+  }
+  return value;
 }
 
 function toAgentRole(role: RepresentativeRole): ModelCallRecord["agentRole"] {
@@ -75,14 +92,17 @@ export async function executeRepresentativeAttempt(
   deps: ExecuteRepresentativeAttemptDeps,
 ): Promise<RepresentativeAttemptResult> {
   const role = requireRepresentativeRole(input.role);
-  const attempt = input.attempt ?? 1;
+  const attempt = requireAttempt(input.attempt);
   const model = getModelIdForRole(input.runKind, role);
   const prompt = buildRepresentativePrompt({
     role,
     chargeSheetMarkdown: input.chargeSheetMarkdown,
+    includeOutputContractCorrection: input.includeOutputContractCorrection,
   });
 
-  await deps.runs.markRunning(input.runId);
+  if (attempt === 1) {
+    await deps.runs.markRunning(input.runId);
+  }
 
   const complete = deps.completeChat ?? completeChat;
   const transport = await complete(
@@ -107,10 +127,17 @@ export async function executeRepresentativeAttempt(
   let validatedResponse: AdvocateResponse | null = null;
   let errorType: string | null = null;
   let errorMessage: string | null = null;
+  let failure: RepresentativeAttemptFailure | null = null;
 
   if (!transport.ok) {
     errorType = transport.errorType;
     errorMessage = transport.errorMessage;
+    failure = {
+      errorType: transport.errorType,
+      errorMessage: transport.errorMessage,
+      httpStatus: transport.httpStatus,
+      retryAfterHeader: transport.retryAfterHeader ?? null,
+    };
   } else {
     const parsed = parseAdvocateResponse(transport.content);
     if (parsed.ok) {
@@ -119,6 +146,12 @@ export async function executeRepresentativeAttempt(
     } else {
       errorType = parsed.errorType;
       errorMessage = parsed.errorMessage;
+      failure = {
+        errorType: parsed.errorType,
+        errorMessage: parsed.errorMessage,
+        httpStatus: null,
+        retryAfterHeader: null,
+      };
     }
   }
 
@@ -147,5 +180,6 @@ export async function executeRepresentativeAttempt(
     record,
     response: validatedResponse,
     returnedModel: transport.returnedModel,
+    failure,
   };
 }

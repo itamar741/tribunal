@@ -335,6 +335,31 @@ describe("executeRepresentativeAttempt", () => {
     }
   });
 
+  it("does not mark the run running again on attempt 2", async () => {
+    const marked: string[] = [];
+    await executeRepresentativeAttempt(
+      {
+        caseId: "case-attempt-2",
+        runId: "run-attempt-2",
+        runKind: TribunalRunKind.SAME_MODEL,
+        role: RepresentativeRole.DEFENSE_1,
+        chargeSheetMarkdown: "# Case\n\nFacts.",
+        attempt: 2,
+        apiKey: "test-key",
+      },
+      {
+        modelCalls: new MemoryModelCalls(),
+        runs: {
+          async markRunning(runId) {
+            marked.push(runId);
+          },
+        },
+        completeChat: async () => successTransport(),
+      },
+    );
+    assert.deepEqual(marked, []);
+  });
+
   it("does not call transport until after markRunning", async () => {
     const order: string[] = [];
     await executeRepresentativeAttempt(

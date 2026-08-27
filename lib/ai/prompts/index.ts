@@ -13,6 +13,7 @@
 
 export type { PromptMessage, PromptMessageRole, TribunalPrompt } from "./types";
 export {
+  OUTPUT_CONTRACT_CORRECTION,
   buildRepresentativePrompt,
   type RepresentativePromptInput,
 } from "./representative";

@@ -16,7 +16,11 @@ import {
   advocateResponseBegin,
   advocateResponseEnd,
 } from "./delimiters";
-import { buildJudgePrompt, buildRepresentativePrompt } from "./index";
+import {
+  OUTPUT_CONTRACT_CORRECTION,
+  buildJudgePrompt,
+  buildRepresentativePrompt,
+} from "./index";
 import { NO_NEW_CASE_FACTS_RULE, UNTRUSTED_CONTENT_POLICY } from "./shared";
 
 const CHARGE_SHEET = [
@@ -140,6 +144,26 @@ describe("buildRepresentativePrompt", () => {
       ),
       true,
     );
+  });
+
+  it("may add a trusted output-contract correction without the invalid response", () => {
+    const baseline = buildRepresentativePrompt({
+      role: RepresentativeRole.DEFENSE_1,
+      chargeSheetMarkdown: CHARGE_SHEET,
+    });
+    const corrected = buildRepresentativePrompt({
+      role: RepresentativeRole.DEFENSE_1,
+      chargeSheetMarkdown: CHARGE_SHEET,
+      includeOutputContractCorrection: true,
+    });
+
+    const baselineSystem = systemContent(baseline);
+    const correctedSystem = systemContent(corrected);
+    assert.equal(baselineSystem.includes(OUTPUT_CONTRACT_CORRECTION), false);
+    assert.equal(correctedSystem.includes(OUTPUT_CONTRACT_CORRECTION), true);
+    assert.equal(correctedSystem.includes("{not json"), false);
+    assert.equal(userContent(baseline), userContent(corrected));
+    assert.equal(correctedSystem.includes(UNTRUSTED_CONTENT_POLICY), true);
   });
 
   it("does not embed a model identifier", () => {

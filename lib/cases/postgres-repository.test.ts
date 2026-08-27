@@ -67,6 +67,7 @@ const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
 const PHASE2_FILE_PREFIX = "phase2-verify-";
 const PHASE4A_FILE_PREFIX = "phase4a-verify-";
 const PHASE4B_FILE_PREFIX = "phase4b-verify-";
+const PHASE4C_FILE_PREFIX = "phase4c-verify-";
 
 function isCheckViolation(error: unknown): boolean {
   return error instanceof DatabaseError && error.code === "23514";
@@ -129,11 +130,12 @@ describe("PostgreSQL persistence", {
 }, () => {
   after(async () => {
     await query(
-      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3",
+      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3 or original_file_name like $4",
       [
         `${PHASE2_FILE_PREFIX}%`,
         `${PHASE4A_FILE_PREFIX}%`,
         `${PHASE4B_FILE_PREFIX}%`,
+        `${PHASE4C_FILE_PREFIX}%`,
       ],
     );
     await closePool();

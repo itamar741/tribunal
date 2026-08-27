@@ -350,7 +350,7 @@ SQLite can work for local experiments, but the settled deployment target is a ho
 
 ### OpenRouter
 
-OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). A server-only Chat Completions adapter and one-agent audited attempt exist under `lib/ai/openrouter/` and `lib/ai/execution/`. Full advocate/judge orchestration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
+OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). A server-only Chat Completions adapter, one-agent audited attempt, and bounded two-attempt representative retry exist under `lib/ai/openrouter/` and `lib/ai/execution/`. Full advocate/judge orchestration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
 
 Structured-output request shape is selected from version-controlled model configuration (`JSON_SCHEMA`, `JSON_OBJECT`, or `PROMPT_ONLY`). The transport does not infer capability from the live catalog during a Tribunal Run. Provider-side JSON Schema or JSON mode is an aid only. Every successful Model Call still requires assistant text, JSON parse, and Zod validation. Malformed JSON is not repaired.
 
@@ -427,7 +427,7 @@ Tribunal execution remains a modular server-side application service independent
 
 Invalid uploads, processing failures, timeouts, malformed responses, and partial run failures must surface as failures. They must **not** be coerced into successful majority verdicts.
 
-Retry/attempt behavior is settled below. **Runtime retry is not implemented yet.**
+Retry/attempt behavior is settled below. Bounded runtime retry for a single representative is implemented under `lib/ai/execution/`. It does not mark the Tribunal Run `SUCCEEDED` or `FAILED`; a later stage coordinator owns run completion. Full advocate-stage, judge, and dual-run orchestration are not implemented.
 
 ### Maximum attempts
 
@@ -451,7 +451,7 @@ Retry once for:
 - valid JSON that fails the applicable Zod response contract;
 - incomplete/truncated response.
 
-For HTTP 429, respect `Retry-After` when OpenRouter provides it. For transient network/5xx failures, a short bounded delay is sufficient. For invalid model output, the retry may happen immediately.
+For HTTP 429, respect `Retry-After` when OpenRouter provides it. Delta-seconds and HTTP-date are accepted; the delay is capped at **60 seconds** so an absurd header cannot stall execution. When Retry-After is missing or unusable, wait 1 second. For timeout, transient network, and transient 5xx failures, wait 1 second. For invalid model output, retry immediately. The sleep is injectable for tests.
 
 ### Non-retryable failures
 
@@ -466,7 +466,7 @@ Do not retry:
 
 A retry must use the same Case, Tribunal Run, agent identity, role, side where applicable, profile, and model. Do not switch models on retry.
 
-For an invalid structured response, the retry prompt may state that the previous response failed the required output contract and must be returned in the exact required structure. It must not change the character/profile or the substantive task.
+For an invalid structured response, attempt 2 adds a short trusted system correction that the previous response failed the required output contract and that the required JSON structure must be followed exactly. The raw invalid response is not included. Character, side, task, charge sheet, and contract are unchanged. Transport, network, and provider failures reuse the original prompt.
 
 ### Stage failure
 
@@ -525,7 +525,7 @@ Settled:
 - Advocate and judge response-contract logical shapes (`docs/architecture.md`)
 - Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`)
 - Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
-- Retry/failure policy (this document; runtime implementation deferred)
+- Retry/failure policy (this document; single-representative runtime retry is implemented under `lib/ai/execution/`)
 - Concrete OpenRouter model assignment for `SAME_MODEL` and `MIXED_MODELS`, plus a non-automatic standby pool (`lib/ai/configurations/`; rationale in [`docs/model-selection.md`](model-selection.md))
 
 Waiting on an explicit recorded contract:
