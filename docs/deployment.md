@@ -4,31 +4,20 @@ Durable decisions for hosting the current synchronous MVP. This document does no
 
 ## Selected topology
 
-**Vercel Pro (Node.js Functions) + existing Supabase PostgreSQL + OpenRouter.**
+**Next.js Web Service on Render Free + existing Supabase transaction-pooler PostgreSQL + OpenRouter.**
 
-No host was configured in the repository (`vercel.json`, Docker, and other platform files are absent). The execute route already declares Vercel Function conventions:
+This is the actual production topology. GitHub `main` is connected with auto-deploy. Do not create another Render service.
 
-```ts
-export const runtime = "nodejs";
-export const maxDuration = 800;
-```
+Render Free constraints that matter for this MVP:
 
-Those exports are ignored by `next start`. They are the binding that makes one synchronous Case execution legal on Vercel Pro.
+- The process is `npm run start` (`next start`). The execute route’s `runtime = "nodejs"` and `maxDuration = 800` exports are ignored on Render.
+- Official Render documentation states web-service HTTP responses may take up to 100 minutes ([Render vs Vercel](https://render.com/docs/render-vs-vercel-comparison)). That is sufficient for the bounded synchronous execute ceiling (≤ ~520s).
+- A Free web service spins down after 15 minutes without inbound traffic and may cold-start on the next request. Persistent Case/Run/`model_calls` data remains in Supabase, not on Render’s ephemeral filesystem.
+- Pushes to `main` trigger a new Render deploy.
 
-Vercel Hobby is **not** sufficient. Official Fluid compute limits ([Configuring Maximum Duration](https://vercel.com/docs/functions/configuring-functions/duration), last updated 24 Aug 2026):
+Do not add Render-specific application architecture (no queues, workers, SSE, or polling).
 
-| Plan | Default | Maximum |
-| --- | --- | --- |
-| Hobby | 300s | 300s |
-| Pro / Enterprise | 300s | 800s (1800s extended is beta) |
-
-Hobby’s 300s ceiling is below the bounded worst-case execute duration. Pro’s 800s maximum, with the existing `maxDuration = 800`, covers it.
-
-Realistic alternatives that also keep the synchronous path (no queues, workers, SSE, or polling):
-
-- **Render Web Service** (`npm run build` + `npm start`): official comparison documents HTTP responses up to 100 minutes ([Render vs Vercel](https://render.com/docs/render-vs-vercel-comparison)). Suitable if Vercel Pro is unavailable.
-- **Railway public HTTP**: official limit is 15 minutes only if data keeps transferring; otherwise the edge closes the request after **5 minutes of no data** ([Specs & Limits](https://docs.railway.com/networking/public-networking/specs-and-limits)). A silent execute wait can exceed 5 minutes. Not selected.
-- **Fly.io**: no function-duration cap, but the proxy idle timeout is configurable and defaults short. Would require an explicit high `idle_timeout`. Not the smallest Next.js path.
+**Vercel Pro** remains a documented alternative if the host is later changed: official Fluid compute maximum is 800s ([Configuring Maximum Duration](https://vercel.com/docs/functions/configuring-functions/duration)), and the execute route already exports `maxDuration = 800`. Vercel Hobby (300s maximum) is not sufficient for the bounded worst-case execute duration.
 
 Do not move to queues, workers, SSE, or polling unless a later measured host limit proves the synchronous request cannot finish.
 
@@ -38,7 +27,7 @@ Set these on the host. Never use a `NEXT_PUBLIC_*` prefix. None of these values 
 
 | Variable | Class | Purpose |
 | --- | --- | --- |
-| `DATABASE_URL` | secret | Server-only PostgreSQL URI. For Vercel, prefer the Supabase **transaction pooler** host (`*.pooler.supabase.com`, port 6543). Do not add `sslmode`, `sslrootcert`, `sslcert`, or `sslkey`. |
+| `DATABASE_URL` | secret | Server-only PostgreSQL URI. Use the Supabase **transaction pooler** host (`*.pooler.supabase.com`, port 6543). Do not add `sslmode`, `sslrootcert`, `sslcert`, or `sslkey`. |
 | `OPENROUTER_API_KEY` | secret | Server-only OpenRouter key for live model requests. |
 | `DATABASE_SSL_CA` | optional non-secret path | Override path to the official Supabase CA. Defaults to `certs/prod-ca-2021.crt` for Supabase hosts. |
 
@@ -46,7 +35,7 @@ TLS remains `rejectUnauthorized: true` with the bundled official CA. Do not disa
 
 Node.js **20.9+** is required by Next.js 16. The `pg` driver requires the Node.js runtime (`runtime = "nodejs"` is already set). Edge/Bun-only runtimes are not acceptable.
 
-Build and start (used by persistent hosts; Vercel runs `next build` and serves Functions):
+Build and start (Render Web Service):
 
 ```bash
 npm run build
@@ -63,10 +52,10 @@ npm run migrate
 
 - Migrations under `supabase/migrations/` are append-only. Apply them with `npm run migrate` from a trusted checkout that has production `DATABASE_URL`. Do not apply them from a request handler. Do not rewrite applied files.
 - The runner reads SQL from `process.cwd()/supabase/migrations` and records filenames in `schema_migrations`.
-- The bundled CA is `certs/prod-ca-2021.crt` (version-controlled). `createSslConfig` reads it from `process.cwd()`. That works on Vercel and on `next start` as long as the repo files are present. No writable filesystem is required.
-- The `pg` pool is a process-local singleton. Correctness is in PostgreSQL, not in process memory. Default pool size is appropriate for a single concurrent Case (up to eight concurrent model calls, then six). Use the transaction pooler on serverless so isolates do not exhaust direct connections.
+- The bundled CA is `certs/prod-ca-2021.crt` (version-controlled). `createSslConfig` reads it from `process.cwd()`. That works on `next start` as long as the repo files are present. No writable filesystem is required.
+- The `pg` pool is a process-local singleton. Correctness is in PostgreSQL, not in process memory. Default pool size is appropriate for a single concurrent Case (up to eight concurrent model calls, then six). Use the transaction pooler.
 
-Do not weaken TLS. Do not apply production migrations until the deploy phase.
+Do not weaken TLS. Production migrations are applied explicitly from a trusted checkout, not from a request handler.
 
 ## Synchronous execution duration
 
@@ -90,7 +79,7 @@ This is not `28 × 90s`. Concurrency collapses the 28 attempts into two sequenti
 
 **Normal shape (no measurement claimed):** one successful attempt per agent, typical model latency tens of seconds, both Runs overlapping → often **1–3 minutes**.
 
-**Worst-case bound:** every agent in the critical path uses a full timeout or a 60s `Retry-After` plus a second full timeout → **~8 minutes**, under the 800s Function limit.
+**Worst-case bound:** every agent in the critical path uses a full timeout or a 60s `Retry-After` plus a second full timeout → **~8 minutes**. Render’s documented HTTP allowance covers that. On a Vercel Pro alternative the existing `maxDuration = 800` would also cover it.
 
 If the host kills the request first, persisted `RUNNING` / `FAILED` rows and any completed `model_calls` remain the source of truth. Reload `/cases/{id}` must only `GET` results.
 
@@ -110,14 +99,14 @@ There is no writable-disk assumption. There is no process-local state required f
 
 Current IDs are `:free` endpoints. Availability, latency, and rate limits are external and volatile. Retries lengthen the HTTP request. Provider failure is an expected Tribunal outcome (`FAILED` Run, no invented verdict). There is no automatic cross-model fallback. Do not change model selection as a deploy workaround.
 
-## Deploy procedure (not executed in preflight)
+## Deploy procedure
 
-1. Confirm Vercel **Pro** (or choose Render Web Service if Pro is unavailable).
-2. Set `DATABASE_URL` and `OPENROUTER_API_KEY` on the host. Confirm no `NEXT_PUBLIC_*` copies exist.
-3. From a trusted checkout, point `DATABASE_URL` at production and run `npm run migrate`. Record applied filenames. Do not apply migrations twice as a workaround.
-4. Deploy the existing Next.js app (`next build`). Do not change engine, models, retry policy, or UI.
-5. Confirm `POST /api/cases/[id]/execute` still exports `runtime = "nodejs"` and `maxDuration = 800`.
-6. Smoke-check `/` and an invalid Case ID only. Do not Start Tribunal until the single planned live E2E.
+The application is already deployed on Render Free with auto-deploy from `main`. Further production deploys happen by pushing `main`. Do not create another service.
+
+1. Keep `DATABASE_URL` (transaction pooler) and `OPENROUTER_API_KEY` on the Render service. Confirm no `NEXT_PUBLIC_*` copies exist.
+2. Apply new SQL only with `npm run migrate` from a trusted checkout against production. Do not migrate from a request handler.
+3. Push `main`. Wait for the Render deploy to finish before starting a new Case.
+4. Smoke-check `/` if needed. A new dual-run Case is a separate, once-only live E2E.
 
 ## Final live E2E (once)
 

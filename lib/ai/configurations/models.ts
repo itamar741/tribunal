@@ -25,9 +25,9 @@ export const SAME_MODEL_BY_ROLE = {
 } as const satisfies Record<TribunalAgentRole, typeof SAME_MODEL_ID>;
 
 export const MIXED_MODELS_BY_ROLE = {
-  [TribunalAgentRole.DEFENSE_1]: "thinkingmachines/inkling:free",
+  [TribunalAgentRole.DEFENSE_1]: "nvidia/nemotron-3.5-lightning:free",
   [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
-  [TribunalAgentRole.PROSECUTION_1]: "google/gemma-4-31b-it:free",
+  [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
   [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
   [TribunalAgentRole.JUDGE_1]: "z-ai/glm-5.2:free",
   [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
@@ -40,7 +40,7 @@ export const MIXED_MODELS_BY_ROLE = {
  */
 export const STANDBY_MODEL_IDS = [
   "nvidia/nemotron-3-ultra-550b-a55b:free",
-  "poolside/laguna-s-2.1:free",
+  "google/gemma-4-31b-it:free",
   "thinkingmachines/inkling-small:free",
 ] as const;
 

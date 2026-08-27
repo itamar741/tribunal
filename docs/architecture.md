@@ -564,7 +564,7 @@ Settled:
 - Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
 - Retry/failure policy (this document; single-representative runtime retry is implemented under `lib/ai/execution/`)
 - Concrete OpenRouter model assignment for `SAME_MODEL` and `MIXED_MODELS`, plus a non-automatic standby pool (`lib/ai/configurations/`; rationale in [`docs/model-selection.md`](model-selection.md))
-- Concrete deployment topology for the MVP ([`docs/deployment.md`](deployment.md): Vercel Pro + Supabase + OpenRouter). Production deploy is not started.
+- Concrete deployment topology for the MVP ([`docs/deployment.md`](deployment.md): Render Free Web Service + Supabase transaction pooler + OpenRouter). Vercel Pro remains a documented alternative.
 
 Waiting on an explicit recorded contract:
 

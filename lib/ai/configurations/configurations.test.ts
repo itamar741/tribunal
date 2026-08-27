@@ -116,9 +116,9 @@ describe("MIXED_MODELS assignment", () => {
     assert.equal(modelIds.length, 7);
     assert.equal(new Set(modelIds).size, 7);
     assert.deepEqual(MIXED_MODELS_BY_ROLE, {
-      [TribunalAgentRole.DEFENSE_1]: "thinkingmachines/inkling:free",
+      [TribunalAgentRole.DEFENSE_1]: "nvidia/nemotron-3.5-lightning:free",
       [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
-      [TribunalAgentRole.PROSECUTION_1]: "google/gemma-4-31b-it:free",
+      [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
       [TribunalAgentRole.JUDGE_1]: "z-ai/glm-5.2:free",
       [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
@@ -163,9 +163,23 @@ describe("model-selection constraints", () => {
     assert.deepEqual(listStandbyModelIds(), STANDBY_MODEL_IDS);
     assert.deepEqual(STANDBY_MODEL_IDS, [
       "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "poolside/laguna-s-2.1:free",
+      "google/gemma-4-31b-it:free",
       "thinkingmachines/inkling-small:free",
     ]);
+    assert.equal(
+      STANDBY_MODEL_IDS.includes("poolside/laguna-s-2.1:free"),
+      false,
+    );
+    assert.equal(
+      MIXED_MODELS_BY_ROLE[TribunalAgentRole.PROSECUTION_1],
+      "poolside/laguna-s-2.1:free",
+    );
+    assert.equal(
+      (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
+        "google/gemma-4-31b-it:free",
+      ),
+      false,
+    );
     assert.equal(STANDBY_MODEL_IDS.length, 3);
     assert.equal(new Set(STANDBY_MODEL_IDS).size, STANDBY_MODEL_IDS.length);
 
@@ -279,7 +293,19 @@ describe("model output modes", () => {
       ModelOutputMode.JSON_OBJECT,
     );
     assert.equal(
-      getOutputModeForModel("thinkingmachines/inkling:free"),
+      getOutputModeForModel(
+        MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
+      ),
+      ModelOutputMode.PROMPT_ONLY,
+    );
+    assert.equal(
+      getOutputModeForModel(
+        MIXED_MODELS_BY_ROLE[TribunalAgentRole.PROSECUTION_1],
+      ),
+      ModelOutputMode.PROMPT_ONLY,
+    );
+    assert.equal(
+      getOutputModeForModel("nvidia/nemotron-3.5-lightning:free"),
       ModelOutputMode.PROMPT_ONLY,
     );
     assert.equal(

@@ -432,7 +432,7 @@ describe("executeRepresentativeAttempt", () => {
         },
       },
     );
-    assert.equal(captured?.model, "thinkingmachines/inkling:free");
+    assert.equal(captured?.model, "nvidia/nemotron-3.5-lightning:free");
     assert.equal(captured?.output.mode, ModelOutputMode.PROMPT_ONLY);
     assert.equal(result.record.status, ModelCallStatus.FAILED);
     assert.equal(result.record.errorType, AttemptErrorType.MALFORMED_JSON);
@@ -455,7 +455,7 @@ describe("outputStrategyForModel", () => {
       mode: "JSON_OBJECT",
     });
     assert.deepEqual(
-      outputStrategyForModel("thinkingmachines/inkling:free", schema),
+      outputStrategyForModel("nvidia/nemotron-3.5-lightning:free", schema),
       { mode: "PROMPT_ONLY" },
     );
   });

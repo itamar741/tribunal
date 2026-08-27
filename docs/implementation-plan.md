@@ -40,11 +40,11 @@ Completed and verified:
 - Persisted results read model under `lib/results`: reconstructs Case metadata, both Runs, validated Advocate/Judge outputs, attempt history, and agent/stage/run/Case token-cost totals from `model_calls`. Each total is a known subtotal plus per-metric completeness. Duplicate successes and inconsistent `SUCCEEDED` Runs fail closed. Does not execute models or replace a persisted `final_verdict`.
 - HTTP execution and results routes: `POST /api/cases/[id]/execute` triggers `executeCaseTribunals` from the persisted charge sheet; `GET /api/cases/[id]/results` returns `getCaseResults`. Upload and Case metadata GET keep their existing contracts.
 - Reviewer UI: upload a `.md` charge sheet, start the Tribunal, wait for the synchronous execute request, then display persisted SAME_MODEL and MIXED_MODELS results. A Case is recoverable at `/cases/[id]` via `GET` results only.
-- Deployment preflight: Vercel Pro + existing Supabase + OpenRouter can keep the current synchronous execute path (`maxDuration = 800`). Hobby is insufficient. Final deploy and live dual-run E2E are not started. Canonical notes: `docs/deployment.md`.
+- Deployment preflight and production host: the app is deployed as a Render Free Web Service (`npm run start`) with GitHub `main` auto-deploy, Supabase transaction-pooler PostgreSQL, and OpenRouter. The first dual-run E2E completed at the system level with both Runs failing in the Advocate stage because of free-model/provider availability. Canonical notes: `docs/deployment.md`.
 
 Not implemented:
 
-- Past-Case listing, production deploy, and final live dual-run E2E.
+- Past-Case listing, and a second live dual-run E2E after the MIXED_MODELS revision.
 
 ## Recommended phase sequence
 
@@ -389,7 +389,7 @@ Completed: upload → start Tribunal → wait for the synchronous execute reques
 
 ## Deployment preflight
 
-Completed as analysis only: the synchronous `POST /api/cases/[id]/execute` path can remain on **Vercel Pro** (800s Function maximum; route already sets `maxDuration = 800`). Vercel Hobby (300s) cannot cover the bounded worst-case duration. Render Web Service is the documented persistent-Node fallback. Production deploy, production migrations, and the single live dual-run E2E remain later. See `docs/deployment.md`.
+Completed: production is a Render Free Web Service with auto-deploy from `main`. Synchronous `POST /api/cases/[id]/execute` remains. The first dual-run E2E completed at the system level; both Runs failed closed in the Advocate stage. MIXED `DEFENSE_1` and `PROSECUTION_1` were then revised. A second fresh-Case live E2E is still pending. See `docs/deployment.md` and `docs/model-selection.md`.
 
 ## Phase 7 — Dual-run coordination, retries, durable results, and Case totals
 
@@ -641,7 +641,7 @@ Settled:
 - Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`, Phase 3C)
 - Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
 - Retry/failure policy (`docs/architecture.md`; single-representative runtime retry is implemented)
-- Concrete deployment topology (`docs/deployment.md`: Vercel Pro + Supabase + OpenRouter). Production deploy is not started.
+- Concrete deployment topology (`docs/deployment.md`: Render Free Web Service + Supabase + OpenRouter). Vercel Pro remains a documented alternative.
 - Concrete OpenRouter model assignment (`lib/ai/configurations/`, Phase 3D; rationale in `docs/model-selection.md`)
 
 Waiting on an explicit recorded contract:

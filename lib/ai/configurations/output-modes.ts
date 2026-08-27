@@ -28,7 +28,7 @@ export const MODEL_OUTPUT_MODES = {
   "google/gemma-4-31b-it:free": ModelOutputMode.JSON_OBJECT,
   "minimax/minimax-m3:free": ModelOutputMode.JSON_OBJECT,
   "google/gemma-4-26b-a4b-it:free": ModelOutputMode.JSON_OBJECT,
-  "thinkingmachines/inkling:free": ModelOutputMode.PROMPT_ONLY,
+  "nvidia/nemotron-3.5-lightning:free": ModelOutputMode.PROMPT_ONLY,
   "nvidia/nemotron-3-ultra-550b-a55b:free": ModelOutputMode.PROMPT_ONLY,
   "poolside/laguna-s-2.1:free": ModelOutputMode.PROMPT_ONLY,
   "thinkingmachines/inkling-small:free": ModelOutputMode.PROMPT_ONLY,
