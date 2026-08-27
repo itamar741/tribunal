@@ -34,12 +34,13 @@ Completed and verified:
 - One-agent OpenRouter vertical slice: representative prompt → one Chat Completions attempt → JSON parse → Advocate Zod validation → one `model_calls` audit row.
 - Bounded two-attempt representative retry: centralized retryability, injectable delay / capped Retry-After, same identity on retry, separate audit rows. Does not complete or fail the Tribunal Run.
 - Parallel Advocate stage under `lib/tribunal`: four representatives start concurrently, each with its own bounded retry. The stage succeeds only with four valid Advocate responses. One permanent failure marks that Tribunal Run `FAILED` and blocks judges.
-- Parallel Judge stage under `lib/tribunal`: three judges start concurrently, each with its own bounded retry. All three valid Judge responses are required. Majority consumes only validated verdicts. A 2-of-3 majority marks the Run `SUCCEEDED`. Permanent Judge failure marks `FAILED` with no majority. Dual-run orchestration and aggregate accounting are not implemented.
+- Parallel Judge stage under `lib/tribunal`: three judges start concurrently, each with its own bounded retry. All three valid Judge responses are required. Majority consumes only validated verdicts. A 2-of-3 majority marks the Run `SUCCEEDED`. Permanent Judge failure marks `FAILED` with no majority.
+- Single-run coordinator `executeTribunalRun`: Advocate stage, then Judge stage only after four valid Advocate responses. Reuses existing stage boundaries. A PENDING Run is claimed once by the atomic `markRunning` transition; non-PENDING or duplicate starts make no model requests. Dual-run orchestration and aggregate accounting are not implemented.
 
 Not implemented:
 
-- Full AI execution against Tribunal Runs.
-- Token/cost aggregation services and dual-run orchestration.
+- Simultaneous SAME_MODEL + MIXED_MODELS execution and Case-level orchestration.
+- Token/cost aggregation services.
 - Tribunal result UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
@@ -362,6 +363,10 @@ Reusable engine, judge contract/profile/configuration, output/result persistence
 ### Dependencies / blockers
 
 Phase 5 plus designed judge contract, judge profiles, and constructed judge prompts.
+
+## Single-run orchestration
+
+Completed: `executeTribunalRun` sequences the existing Advocate and Judge stages for one PENDING Tribunal Run. Judges start only after four valid Advocate responses. The coordinator does not duplicate prompt construction, model resolution, retry, audit, majority, or Run lifecycle writes. Dual-run and Case-level orchestration remain later.
 
 ## Phase 7 — Dual-run coordination, retries, durable results, and Case totals
 

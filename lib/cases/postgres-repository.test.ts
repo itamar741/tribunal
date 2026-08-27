@@ -28,7 +28,10 @@ import {
   type NewModelCallInput,
 } from "../model-calls/types";
 import { PostgresCaseRepository } from "./postgres-repository";
-import { PostgresTribunalRunRepository } from "./postgres-run-repository";
+import {
+  PostgresTribunalRunRepository,
+  TribunalRunTransitionError,
+} from "./postgres-run-repository";
 import { hasRequiredRunKinds } from "./runs";
 import { TribunalRunStatus, TribunalRunVerdict } from "./types";
 
@@ -72,6 +75,7 @@ const PHASE4B_FILE_PREFIX = "phase4b-verify-";
 const PHASE4C_FILE_PREFIX = "phase4c-verify-";
 const PHASE5_FILE_PREFIX = "phase5-verify-";
 const PHASE6_FILE_PREFIX = "phase6-verify-";
+const PHASE7_FILE_PREFIX = "phase7-verify-";
 
 function isCheckViolation(error: unknown): boolean {
   return error instanceof DatabaseError && error.code === "23514";
@@ -134,7 +138,7 @@ describe("PostgreSQL persistence", {
 }, () => {
   after(async () => {
     await query(
-      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3 or original_file_name like $4 or original_file_name like $5 or original_file_name like $6",
+      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3 or original_file_name like $4 or original_file_name like $5 or original_file_name like $6 or original_file_name like $7",
       [
         `${PHASE2_FILE_PREFIX}%`,
         `${PHASE4A_FILE_PREFIX}%`,
@@ -142,6 +146,7 @@ describe("PostgreSQL persistence", {
         `${PHASE4C_FILE_PREFIX}%`,
         `${PHASE5_FILE_PREFIX}%`,
         `${PHASE6_FILE_PREFIX}%`,
+        `${PHASE7_FILE_PREFIX}%`,
       ],
     );
     await closePool();
@@ -580,6 +585,79 @@ describe("PostgreSQL persistence", {
         found.failureReason,
         "Advocate stage failed after two attempts.",
       );
+    });
+
+    it("rejects a second PENDING -> RUNNING claim", async () => {
+      const cases = new PostgresCaseRepository();
+      const runs = new PostgresTribunalRunRepository();
+      const created = await cases.create({
+        originalFileName: `${PHASE7_FILE_PREFIX}second-claim.md`,
+        chargeSheetText: "Reject a second RUNNING claim.",
+      });
+      const runId = created.runs[0].id;
+
+      await runs.markRunning(runId);
+      await assert.rejects(
+        () => runs.markRunning(runId),
+        TribunalRunTransitionError,
+      );
+
+      const found = await runs.getById(runId);
+      assert.equal(found?.status, TribunalRunStatus.RUNNING);
+    });
+
+    it("allows only one concurrent PENDING -> RUNNING claim", async () => {
+      const cases = new PostgresCaseRepository();
+      const runs = new PostgresTribunalRunRepository();
+      const created = await cases.create({
+        originalFileName: `${PHASE7_FILE_PREFIX}concurrent-claim.md`,
+        chargeSheetText: "Only one caller may claim a PENDING run.",
+      });
+      const runId = created.runs[0].id;
+
+      const outcomes = await Promise.allSettled([
+        runs.markRunning(runId),
+        runs.markRunning(runId),
+      ]);
+      const fulfilled = outcomes.filter((outcome) => outcome.status === "fulfilled");
+      const rejected = outcomes.filter((outcome) => outcome.status === "rejected");
+
+      assert.equal(fulfilled.length, 1);
+      assert.equal(rejected.length, 1);
+      if (rejected[0]?.status === "rejected") {
+        assert.equal(rejected[0].reason instanceof TribunalRunTransitionError, true);
+      }
+
+      const found = await runs.getById(runId);
+      assert.equal(found?.status, TribunalRunStatus.RUNNING);
+    });
+
+    it("rejects markRunning from SUCCEEDED and FAILED", async () => {
+      const cases = new PostgresCaseRepository();
+      const runs = new PostgresTribunalRunRepository();
+      const created = await cases.create({
+        originalFileName: `${PHASE7_FILE_PREFIX}terminal-claim.md`,
+        chargeSheetText: "Terminal runs cannot be claimed again.",
+      });
+      const [sameModel, mixed] = created.runs;
+
+      await runs.markRunning(sameModel.id);
+      await runs.markSucceeded(sameModel.id, TribunalRunVerdict.JUSTIFIED);
+      await assert.rejects(
+        () => runs.markRunning(sameModel.id),
+        TribunalRunTransitionError,
+      );
+
+      await runs.markRunning(mixed.id);
+      await runs.markFailed(mixed.id, "Already failed.");
+      await assert.rejects(
+        () => runs.markRunning(mixed.id),
+        TribunalRunTransitionError,
+      );
+
+      assert.equal((await runs.getById(sameModel.id))?.status, TribunalRunStatus.SUCCEEDED);
+      assert.equal((await runs.getById(mixed.id))?.status, TribunalRunStatus.FAILED);
+      assert.equal((await runs.getById(mixed.id))?.finalVerdict, null);
     });
   });
 

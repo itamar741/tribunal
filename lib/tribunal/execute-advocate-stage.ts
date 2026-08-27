@@ -54,6 +54,7 @@ export type AdvocateStageFailure = {
   ok: false;
   failedRoles: RepresentativeRole[];
   failures: AdvocateStageAgentFailure[];
+  rejectedStart?: boolean;
 };
 
 export type AdvocateStageResult = AdvocateStageSuccess | AdvocateStageFailure;
@@ -180,11 +181,14 @@ export async function executeAdvocateStage(
   try {
     await deps.runs.markRunning(input.runId);
   } catch (error) {
-    return configurationFailures(
-      error instanceof Error
-        ? error.message
-        : "Tribunal Run could not be marked RUNNING.",
-    );
+    return {
+      ...configurationFailures(
+        error instanceof Error
+          ? error.message
+          : "Tribunal Run could not be marked RUNNING.",
+      ),
+      rejectedStart: true,
+    };
   }
 
   const settled = await Promise.allSettled(

@@ -9,8 +9,8 @@
  * - Each run calculates its own majority verdict.
  * - AI failures must never silently become valid verdicts.
  *
- * Advocate and Judge stages are implemented. Dual-run orchestration
- * is not.
+ * Advocate and Judge stages and single-run orchestration are
+ * implemented. Dual-run orchestration is not.
  */
 
 export { executeAdvocateStage } from "./execute-advocate-stage";
@@ -36,3 +36,15 @@ export type {
   JudgeStageSuccess,
 } from "./execute-judge-stage";
 export { calculateMajority } from "./majority";
+export { executeTribunalRun } from "./execute-tribunal-run";
+export type {
+  ExecuteTribunalRunDeps,
+  ExecuteTribunalRunInput,
+  TribunalRunAdvocateFailure,
+  TribunalRunFailure,
+  TribunalRunJudgeFailure,
+  TribunalRunNotExecutableFailure,
+  TribunalRunRepositoryPort,
+  TribunalRunResult,
+  TribunalRunSuccess,
+} from "./execute-tribunal-run";
