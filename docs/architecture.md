@@ -79,7 +79,7 @@ Case (one charge sheet)
 - Duplicate `(case_id, run_type)` rows are rejected by a database unique constraint.
 - Allowed run lifecycle values are exactly `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`.
 - `SUCCEEDED` stores the run’s final verdict (`JUSTIFIED` or `NOT_JUSTIFIED`). `FAILED` stores a failure reason and must not store a fabricated final verdict.
-- Each case later executes those two Tribunal runs in parallel.
+- Each Case executes those two Tribunal Runs in parallel through `executeCaseTribunals`. The Runs remain independent; one may succeed while the other fails. Case-level `ok` means both Runs succeeded, not that no usable Run result exists. A successful sibling keeps its validated outputs and final verdict. There is no Case-level combined verdict.
 - Each run later records its own agent outputs, majority verdict (the run’s final verdict), and model-call audit trail.
 
 ## One reusable Tribunal engine
@@ -350,7 +350,7 @@ SQLite can work for local experiments, but the settled deployment target is a ho
 
 ### OpenRouter
 
-OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). A server-only Chat Completions adapter, one-agent audited attempt, and bounded two-attempt representative and Judge retry exist under `lib/ai/openrouter/` and `lib/ai/execution/`. The four-advocate and three-judge parallel stages, two-of-three majority, and single-run coordinator (`executeTribunalRun`) are implemented under `lib/tribunal`. Dual-run orchestration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
+OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). A server-only Chat Completions adapter, one-agent audited attempt, and bounded two-attempt representative and Judge retry exist under `lib/ai/openrouter/` and `lib/ai/execution/`. The four-advocate and three-judge parallel stages, two-of-three majority, single-run coordinator (`executeTribunalRun`), and Case-level dual-run coordinator (`executeCaseTribunals`) are implemented under `lib/tribunal`. Token/cost aggregation is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
 
 Structured-output request shape is selected from version-controlled model configuration (`JSON_SCHEMA`, `JSON_OBJECT`, or `PROMPT_ONLY`). The transport does not infer capability from the live catalog during a Tribunal Run. Provider-side JSON Schema or JSON mode is an aid only. Every successful Model Call still requires assistant text, JSON parse, and Zod validation. Malformed JSON is not repaired.
 
@@ -427,7 +427,7 @@ Tribunal execution remains a modular server-side application service independent
 
 Invalid uploads, processing failures, timeouts, malformed responses, and partial run failures must surface as failures. They must **not** be coerced into successful majority verdicts.
 
-Retry/attempt behavior is settled below. Bounded runtime retry for a single representative or Judge is implemented under `lib/ai/execution/`. Those helpers do not mark the Tribunal Run `SUCCEEDED` or `FAILED`. The Advocate-stage coordinator marks a run `FAILED` when any representative permanently fails and leaves a successful stage `RUNNING`. The Judge-stage coordinator calculates two-of-three majority from validated `verdict` fields only after three valid Judge responses, then marks `SUCCEEDED`. Any permanent Judge failure marks `FAILED` with no majority and a null final verdict. `executeTribunalRun` sequences those stages for one existing Run and does not add extra lifecycle writes. A fresh execution is claimed by the existing atomic `PENDING → RUNNING` transition; a Run that is already `RUNNING`, `SUCCEEDED`, or `FAILED` is rejected with no model requests and no new audit rows. Dual-run orchestration is not implemented.
+Retry/attempt behavior is settled below. Bounded runtime retry for a single representative or Judge is implemented under `lib/ai/execution/`. Those helpers do not mark the Tribunal Run `SUCCEEDED` or `FAILED`. The Advocate-stage coordinator marks a run `FAILED` when any representative permanently fails and leaves a successful stage `RUNNING`. The Judge-stage coordinator calculates two-of-three majority from validated `verdict` fields only after three valid Judge responses, then marks `SUCCEEDED`. Any permanent Judge failure marks `FAILED` with no majority and a null final verdict. `executeTribunalRun` sequences those stages for one existing Run and does not add extra lifecycle writes. A fresh execution is claimed by the existing atomic `PENDING → RUNNING` transition; a Run that is already `RUNNING`, `SUCCEEDED`, or `FAILED` is rejected with no model requests and no new audit rows. `executeCaseTribunals` starts the Case’s two existing Runs concurrently and independently. Token/cost aggregation is not implemented.
 
 ### Maximum attempts
 
