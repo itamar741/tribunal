@@ -11,13 +11,17 @@ import {
 import { buildJudgePrompt, buildRepresentativePrompt } from "../prompts";
 import {
   MIXED_MODELS_BY_ROLE,
+  MODEL_OUTPUT_MODES,
+  ModelOutputMode,
   ROLE_MODEL_ASSIGNMENTS,
   SAME_MODEL_BY_ROLE,
   SAME_MODEL_ID,
   STANDBY_MODEL_IDS,
   TribunalRunKind,
   getModelIdForRole,
+  getOutputModeForModel,
   getRoleModelAssignment,
+  listConfiguredModelIds,
   listStandbyModelIds,
 } from "./index";
 
@@ -82,8 +86,14 @@ describe("SAME_MODEL assignment", () => {
     );
   });
 
-  it("uses openai/gpt-oss-120b:free as the homogeneous baseline", () => {
-    assert.equal(SAME_MODEL_ID, "openai/gpt-oss-120b:free");
+  it("uses minimax/minimax-m3:free as the homogeneous baseline", () => {
+    assert.equal(SAME_MODEL_ID, "minimax/minimax-m3:free");
+    for (const role of Object.values(TribunalAgentRole)) {
+      assert.equal(
+        getModelIdForRole(TribunalRunKind.SAME_MODEL, role),
+        "minimax/minimax-m3:free",
+      );
+    }
     assert.equal(
       getRoleModelAssignment(TribunalRunKind.SAME_MODEL),
       SAME_MODEL_BY_ROLE,
@@ -105,6 +115,15 @@ describe("MIXED_MODELS assignment", () => {
 
     assert.equal(modelIds.length, 7);
     assert.equal(new Set(modelIds).size, 7);
+    assert.deepEqual(MIXED_MODELS_BY_ROLE, {
+      [TribunalAgentRole.DEFENSE_1]: "thinkingmachines/inkling:free",
+      [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
+      [TribunalAgentRole.PROSECUTION_1]: "google/gemma-4-31b-it:free",
+      [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
+      [TribunalAgentRole.JUDGE_1]: "z-ai/glm-5.2:free",
+      [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
+      [TribunalAgentRole.JUDGE_3]: "google/gemma-4-26b-a4b-it:free",
+    });
 
     for (const role of Object.values(TribunalAgentRole)) {
       assert.equal(
@@ -142,6 +161,11 @@ describe("model-selection constraints", () => {
 
   it("keeps the standby pool unique and outside automatic role resolution", () => {
     assert.deepEqual(listStandbyModelIds(), STANDBY_MODEL_IDS);
+    assert.deepEqual(STANDBY_MODEL_IDS, [
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "poolside/laguna-s-2.1:free",
+      "thinkingmachines/inkling-small:free",
+    ]);
     assert.equal(STANDBY_MODEL_IDS.length, 3);
     assert.equal(new Set(STANDBY_MODEL_IDS).size, STANDBY_MODEL_IDS.length);
 
@@ -216,5 +240,63 @@ describe("model independence of profiles and prompts", () => {
       assert.equal("model" in profile, false);
       assert.equal("modelId" in profile, false);
     }
+    assert.equal(profileCatalog.includes("JSON_SCHEMA"), false);
+    assert.equal(profileCatalog.includes("JSON_OBJECT"), false);
+    assert.equal(profileCatalog.includes("PROMPT_ONLY"), false);
+    assert.equal(representativePrompt.includes("JSON_SCHEMA"), false);
+    assert.equal(judgePrompt.includes("response_format"), false);
+  });
+});
+
+describe("model output modes", () => {
+  it("assigns an explicit output mode to every configured primary and standby ID", () => {
+    const configured = [...new Set(listConfiguredModelIds())].sort();
+    const mapped = Object.keys(MODEL_OUTPUT_MODES).sort();
+    assert.deepEqual(configured, mapped);
+
+    assert.equal(
+      getOutputModeForModel("z-ai/glm-5.2:free"),
+      ModelOutputMode.JSON_SCHEMA,
+    );
+    assert.equal(
+      getOutputModeForModel("nvidia/nemotron-3-super-120b-a12b:free"),
+      ModelOutputMode.JSON_SCHEMA,
+    );
+    assert.equal(
+      getOutputModeForModel("minimax/minimax-m3:free"),
+      ModelOutputMode.JSON_OBJECT,
+    );
+    assert.equal(
+      getOutputModeForModel("minimax/minimax-m2.7:free"),
+      ModelOutputMode.JSON_OBJECT,
+    );
+    assert.equal(
+      getOutputModeForModel("google/gemma-4-31b-it:free"),
+      ModelOutputMode.JSON_OBJECT,
+    );
+    assert.equal(
+      getOutputModeForModel("google/gemma-4-26b-a4b-it:free"),
+      ModelOutputMode.JSON_OBJECT,
+    );
+    assert.equal(
+      getOutputModeForModel("thinkingmachines/inkling:free"),
+      ModelOutputMode.PROMPT_ONLY,
+    );
+    assert.equal(
+      getOutputModeForModel("nvidia/nemotron-3-ultra-550b-a55b:free"),
+      ModelOutputMode.PROMPT_ONLY,
+    );
+    assert.equal(
+      getOutputModeForModel("poolside/laguna-s-2.1:free"),
+      ModelOutputMode.PROMPT_ONLY,
+    );
+    assert.equal(
+      getOutputModeForModel("thinkingmachines/inkling-small:free"),
+      ModelOutputMode.PROMPT_ONLY,
+    );
+    assert.throws(
+      () => getOutputModeForModel("openrouter/free"),
+      /No output mode configured/,
+    );
   });
 });

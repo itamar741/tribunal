@@ -12,7 +12,7 @@ import { TribunalRunKind } from "./run-kinds";
  * Canonical rationale: docs/model-selection.md
  */
 
-export const SAME_MODEL_ID = "openai/gpt-oss-120b:free";
+export const SAME_MODEL_ID = "minimax/minimax-m3:free";
 
 export const SAME_MODEL_BY_ROLE = {
   [TribunalAgentRole.DEFENSE_1]: SAME_MODEL_ID,
@@ -25,8 +25,8 @@ export const SAME_MODEL_BY_ROLE = {
 } as const satisfies Record<TribunalAgentRole, typeof SAME_MODEL_ID>;
 
 export const MIXED_MODELS_BY_ROLE = {
-  [TribunalAgentRole.DEFENSE_1]: SAME_MODEL_ID,
-  [TribunalAgentRole.DEFENSE_2]: "inclusionai/ling-3.0-flash:free",
+  [TribunalAgentRole.DEFENSE_1]: "thinkingmachines/inkling:free",
+  [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
   [TribunalAgentRole.PROSECUTION_1]: "google/gemma-4-31b-it:free",
   [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
   [TribunalAgentRole.JUDGE_1]: "z-ai/glm-5.2:free",
@@ -39,9 +39,9 @@ export const MIXED_MODELS_BY_ROLE = {
  * change. Not consulted by role resolution.
  */
 export const STANDBY_MODEL_IDS = [
-  "openai/gpt-oss-20b:free",
-  "nex-agi/nex-n2-pro:free",
-  "minimax/minimax-m2.7:free",
+  "nvidia/nemotron-3-ultra-550b-a55b:free",
+  "poolside/laguna-s-2.1:free",
+  "thinkingmachines/inkling-small:free",
 ] as const;
 
 export type OpenRouterModelId =
