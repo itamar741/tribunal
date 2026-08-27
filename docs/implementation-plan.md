@@ -39,10 +39,11 @@ Completed and verified:
 - Case-level dual-run coordinator `executeCaseTribunals`: resolves the two durable Runs from persistence, starts `SAME_MODEL` and `MIXED_MODELS` concurrently, and keeps their outcomes independent.
 - Persisted results read model under `lib/results`: reconstructs Case metadata, both Runs, validated Advocate/Judge outputs, attempt history, and agent/stage/run/Case token-cost totals from `model_calls`. Each total is a known subtotal plus per-metric completeness. Duplicate successes and inconsistent `SUCCEEDED` Runs fail closed. Does not execute models or replace a persisted `final_verdict`.
 - HTTP execution and results routes: `POST /api/cases/[id]/execute` triggers `executeCaseTribunals` from the persisted charge sheet; `GET /api/cases/[id]/results` returns `getCaseResults`. Upload and Case metadata GET keep their existing contracts.
+- Reviewer UI: upload a `.md` charge sheet, start the Tribunal, wait for the synchronous execute request, then display persisted SAME_MODEL and MIXED_MODELS results. A Case is recoverable at `/cases/[id]` via `GET` results only.
 
 Not implemented:
 
-- Results UI, past-Case listing, and deployment.
+- Past-Case listing, deployment, and final live dual-run E2E.
 
 ## Recommended phase sequence
 
@@ -379,7 +380,11 @@ Completed: `getCaseResults` reconstructs Case results from persisted Case, Run, 
 
 ## HTTP execution and results API
 
-Completed: `POST /api/cases/[id]/execute` and `GET /api/cases/[id]/results`. Execution uses the persisted charge sheet and existing `executeCaseTribunals`. Results are read-only. HTTP 200 is used for completed execution requests, including partial Run failure; the body is authoritative per Run. The results UI remains later.
+Completed: `POST /api/cases/[id]/execute` and `GET /api/cases/[id]/results`. Execution uses the persisted charge sheet and existing `executeCaseTribunals`. Results are read-only. HTTP 200 is used for completed execution requests, including partial Run failure; the body is authoritative per Run.
+
+## Reviewer UI
+
+Completed: upload → start Tribunal → wait for the synchronous execute request → `GET` persisted results. The two Runs are shown independently. Known Cases reopen at `/cases/[id]` without executing models. Deployment and final live E2E remain later.
 
 ## Phase 7 — Dual-run coordination, retries, durable results, and Case totals
 

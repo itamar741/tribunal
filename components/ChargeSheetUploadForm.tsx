@@ -1,32 +1,15 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { isMdFileName, MAX_CHARGE_SHEET_BYTES } from "@/lib/charge-sheet";
+import { uploadChargeSheet } from "@/lib/ui/tribunal-client";
 
 type SubmitState =
   | { status: "idle" }
   | { status: "processing" }
-  | {
-      status: "success";
-      caseId: string;
-      fileName: string;
-      characterCount: number;
-      runs: Array<{ id: string; runType: string; status: string }>;
-    }
+  | { status: "success"; caseId: string }
   | { status: "error"; message: string };
-
-type ApiSuccess = {
-  ok: true;
-  caseId: string;
-  fileName: string;
-  characterCount: number;
-  runs: Array<{ id: string; runType: string; status: string }>;
-};
-
-type ApiError = {
-  ok: false;
-  error: string;
-};
 
 function clientValidate(file: File | undefined): string | null {
   if (!file) {
@@ -42,6 +25,7 @@ function clientValidate(file: File | undefined): string | null {
 }
 
 export function ChargeSheetUploadForm() {
+  const router = useRouter();
   const [state, setState] = useState<SubmitState>({ status: "idle" });
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
@@ -70,34 +54,16 @@ export function ChargeSheetUploadForm() {
       return;
     }
 
-    const body = new FormData();
-    body.append("chargeSheet", file as File);
-
     setState({ status: "processing" });
 
     try {
-      const response = await fetch("/api/charge-sheet", {
-        method: "POST",
-        body,
-      });
-      const payload = (await response.json()) as ApiSuccess | ApiError;
-
-      if (!response.ok || !payload.ok) {
-        const message =
-          !payload.ok && "error" in payload
-            ? payload.error
-            : "Charge sheet upload failed.";
-        setState({ status: "error", message });
+      const result = await uploadChargeSheet(file as File);
+      if (!result.ok) {
+        setState({ status: "error", message: result.error });
         return;
       }
-
-      setState({
-        status: "success",
-        caseId: payload.caseId,
-        fileName: payload.fileName,
-        characterCount: payload.characterCount,
-        runs: payload.runs,
-      });
+      setState({ status: "success", caseId: result.body.caseId });
+      router.push(`/cases/${result.body.caseId}`);
     } catch {
       setState({
         status: "error",
@@ -141,7 +107,7 @@ export function ChargeSheetUploadForm() {
           disabled={busy}
           className="border border-[var(--foreground)] bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--surface)] disabled:opacity-60"
         >
-          {busy ? "Processing…" : "Submit charge sheet"}
+          {busy ? "Creating Case…" : "Create Case"}
         </button>
       </form>
 
@@ -150,17 +116,10 @@ export function ChargeSheetUploadForm() {
           <p className="text-[var(--muted)]">Validating charge sheet…</p>
         ) : null}
         {state.status === "success" ? (
-          <p>
-            Case created: {state.caseId}. File {state.fileName} (
-            {state.characterCount.toLocaleString()} characters). Runs:{" "}
-            {state.runs
-              .map((run) => `${run.runType} (${run.status})`)
-              .join(", ")}
-            .
-          </p>
+          <p>Case created: {state.caseId}. Opening the Case…</p>
         ) : null}
         {state.status === "error" ? (
-          <p role="alert" className="text-red-700">
+          <p role="alert" className="text-red-800">
             {state.message}
           </p>
         ) : null}
