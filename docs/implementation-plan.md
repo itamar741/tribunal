@@ -38,10 +38,11 @@ Completed and verified:
 - Single-run coordinator `executeTribunalRun`: Advocate stage, then Judge stage only after four valid Advocate responses. Reuses existing stage boundaries. A PENDING Run is claimed once by the atomic `markRunning` transition; non-PENDING or duplicate starts make no model requests.
 - Case-level dual-run coordinator `executeCaseTribunals`: resolves the two durable Runs from persistence, starts `SAME_MODEL` and `MIXED_MODELS` concurrently, and keeps their outcomes independent.
 - Persisted results read model under `lib/results`: reconstructs Case metadata, both Runs, validated Advocate/Judge outputs, attempt history, and agent/stage/run/Case token-cost totals from `model_calls`. Each total is a known subtotal plus per-metric completeness. Duplicate successes and inconsistent `SUCCEEDED` Runs fail closed. Does not execute models or replace a persisted `final_verdict`.
+- HTTP execution and results routes: `POST /api/cases/[id]/execute` triggers `executeCaseTribunals` from the persisted charge sheet; `GET /api/cases/[id]/results` returns `getCaseResults`. Upload and Case metadata GET keep their existing contracts.
 
 Not implemented:
 
-- Execution API, results UI, past-Case listing, and deployment.
+- Results UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
 
@@ -374,7 +375,11 @@ Completed: `executeCaseTribunals` resolves the Case’s existing `SAME_MODEL` an
 
 ## Results read model and accounting
 
-Completed: `getCaseResults` reconstructs Case results from persisted Case, Run, and Model Call rows. Validated outputs come from `model_calls.validated_response`. Accounting totals are `{ value, complete }` per metric at agent, stage, run, and Case levels. A known subtotal is kept when some attempts are unknown. Inconsistent `SUCCEEDED` data fails closed. The execution API and results UI remain later.
+Completed: `getCaseResults` reconstructs Case results from persisted Case, Run, and Model Call rows. Validated outputs come from `model_calls.validated_response`. Accounting totals are `{ value, complete }` per metric at agent, stage, run, and Case levels. A known subtotal is kept when some attempts are unknown. Inconsistent `SUCCEEDED` data fails closed.
+
+## HTTP execution and results API
+
+Completed: `POST /api/cases/[id]/execute` and `GET /api/cases/[id]/results`. Execution uses the persisted charge sheet and existing `executeCaseTribunals`. Results are read-only. HTTP 200 is used for completed execution requests, including partial Run failure; the body is authoritative per Run. The results UI remains later.
 
 ## Phase 7 — Dual-run coordination, retries, durable results, and Case totals
 

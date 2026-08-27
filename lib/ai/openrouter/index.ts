@@ -6,7 +6,11 @@
  */
 
 export { completeChat } from "./client";
-export { parseOpenRouterHttpError, readRetryAfterHeader } from "./http-error";
+export {
+  parseOpenRouterHttpError,
+  readRetryAfterHeader,
+  sanitizeOpenRouterErrorText,
+} from "./http-error";
 export type { OpenRouterHttpErrorDetail } from "./http-error";
 export {
   formatInvalidResponseMessage,

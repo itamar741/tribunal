@@ -13,6 +13,7 @@ import {
   type TribunalRunRecord,
 } from "../cases";
 import { hasRequiredRunKinds } from "../cases";
+import { DatabaseConfigError } from "../db";
 import {
   ModelCallAgentRole,
   ModelCallStage,
@@ -258,6 +259,9 @@ export async function getCaseResults(
   try {
     record = await deps.cases.getById(input.caseId);
   } catch (error) {
+    if (error instanceof DatabaseConfigError) {
+      throw error;
+    }
     return {
       ok: false,
       reason: "INVALID_TOPOLOGY",

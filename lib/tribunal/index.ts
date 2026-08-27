@@ -10,8 +10,8 @@
  * - AI failures must never silently become valid verdicts.
  *
  * Advocate and Judge stages, single-run orchestration, and Case-level
- * dual-run orchestration are implemented. Aggregation, API, and UI
- * are not.
+ * dual-run orchestration are implemented. HTTP trigger and persisted
+ * results retrieval live under app/api and lib/api. UI is not.
  */
 
 export { executeAdvocateStage } from "./execute-advocate-stage";

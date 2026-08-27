@@ -443,12 +443,22 @@ Validated Advocate and Judge slots come from the single `SUCCEEDED` `model_calls
 
 ## Execution mechanism
 
-Tribunal execution remains a modular server-side application service independent of browser transport.
+Tribunal execution remains a modular server-side application service independent of browser transport. HTTP is only a trigger and query boundary.
 
-- Start with the simplest Next.js-compatible mechanism that can reliably execute the two parallel Tribunal Runs.
-- Do not pre-commit the MVP to a queue, job system, or additional durable background infrastructure.
-- Measure the selected deployment/runtime limits against real execution duration and interruption behavior.
-- Introduce additional background/job infrastructure only if those measurements show the simpler path cannot complete reliably.
+```text
+POST /api/charge-sheet          → create Case + two PENDING Runs
+GET  /api/cases/{id}            → Case metadata (no charge-sheet text)
+POST /api/cases/{id}/execute    → executeCaseTribunals(persisted charge sheet)
+GET  /api/cases/{id}/results    → getCaseResults (read-only)
+```
+
+- `POST /api/cases/{id}/execute` uses the Case ID in the route as authority. It loads the persisted `charge_sheet_text` and `OPENROUTER_API_KEY` on the server. The client cannot supply Run IDs, model IDs, profiles, charge-sheet text, retry parameters, or verdicts.
+- HTTP **200** is used for every completed execution request: both Runs succeeded, one succeeded, or both failed. The JSON body is authoritative. `ok: true` means both Runs succeeded. `ok: false` with `reason: "RUN_FAILURE"` still includes both independent Run outcomes. Provider/model failures are not converted into an opaque 500.
+- Duplicate execute requests keep the existing per-Run `PENDING → RUNNING` claim. Already-started or terminal Runs return `NOT_PENDING` and make no additional model requests. There is no Case-level lock.
+- `GET /api/cases/{id}/results` is read-only. It never executes a model or mutates Run state. Charge-sheet text is omitted. There is no Case-level combined verdict.
+- Invalid Case ID is 400; missing Case is 404; missing OpenRouter or database configuration is 503; invalid durable topology is 409; persisted integrity failure is 500 with `INTEGRITY_VIOLATION`. Unexpected failures return a safe 500 without secrets, stack traces, prompts, or raw provider payloads.
+- Start with this synchronous Next.js route. Do not pre-commit the MVP to a queue, job system, SSE, polling, or additional durable background infrastructure.
+- A complete Case can include 14 minimum model calls, up to 28 attempts with retries, and provider `Retry-After` delays. Host request-duration limits must be verified against that bound before production deployment. Do not introduce fire-and-forget, queue, worker, SSE, or polling infrastructure until those measurements require it.
 - Regardless of transport, idempotency and per-attempt auditing must prevent accidental duplicate calls and hidden cost.
 
 ## Failure handling and retry policy

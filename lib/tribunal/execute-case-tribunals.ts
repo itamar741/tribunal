@@ -1,6 +1,7 @@
 import { TribunalRunKind } from "../ai/configurations";
 import type { CaseRecord, CaseRepository, TribunalRunRecord } from "../cases";
 import { hasRequiredRunKinds } from "../cases";
+import { DatabaseConfigError } from "../db";
 import {
   executeTribunalRun,
   type ExecuteTribunalRunDeps,
@@ -164,6 +165,9 @@ export async function executeCaseTribunals(
   try {
     caseRecord = await cases.getById(input.caseId);
   } catch (error) {
+    if (error instanceof DatabaseConfigError) {
+      throw error;
+    }
     return setupFailure(
       "INVALID_TOPOLOGY",
       error instanceof Error
