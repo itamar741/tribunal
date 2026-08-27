@@ -119,7 +119,7 @@ Run lifecycle:
 
 Judge and Tribunal Run verdicts are `JUSTIFIED | NOT_JUSTIFIED`. Three valid judge verdicts are required; a 2-of-3 majority determines the run’s final verdict.
 
-Each `model_calls` row is one actual AI API attempt. `SUCCEEDED` means the output passed the applicable runtime response contract; that structured output is stored in `validated_response`. Failed attempts normally store `NULL` there. Unknown usage/cost is `NULL`, never zero. Prompts, raw model output, hidden reasoning, and provider request payloads are not stored.
+Each `model_calls` row is one actual AI API attempt. `SUCCEEDED` means the output passed the applicable runtime response contract; that structured output is stored in `validated_response`. Failed attempts normally store `NULL` there. Unknown usage/cost is `NULL`, never a guessed zero. A provider-reported zero is stored as zero. Prompts, raw model output, hidden reasoning, and provider request payloads are not stored. Case results and token/cost totals are reconstructed from these three tables by `getCaseResults`; aggregates are not stored as separate rows. Each total keeps the known subtotal and a per-metric completeness flag.
 
 Useful indexes: `tribunal_runs(case_id)`, `model_calls(case_id)`. Lookups by Tribunal Run use the unique `(run_id, agent_role, attempt)` index.
 

@@ -36,13 +36,12 @@ Completed and verified:
 - Parallel Advocate stage under `lib/tribunal`: four representatives start concurrently, each with its own bounded retry. The stage succeeds only with four valid Advocate responses. One permanent failure marks that Tribunal Run `FAILED` and blocks judges.
 - Parallel Judge stage under `lib/tribunal`: three judges start concurrently, each with its own bounded retry. All three valid Judge responses are required. Majority consumes only validated verdicts. A 2-of-3 majority marks the Run `SUCCEEDED`. Permanent Judge failure marks `FAILED` with no majority.
 - Single-run coordinator `executeTribunalRun`: Advocate stage, then Judge stage only after four valid Advocate responses. Reuses existing stage boundaries. A PENDING Run is claimed once by the atomic `markRunning` transition; non-PENDING or duplicate starts make no model requests.
-- Case-level dual-run coordinator `executeCaseTribunals`: resolves the two durable Runs from persistence, starts `SAME_MODEL` and `MIXED_MODELS` concurrently, and keeps their outcomes independent. Aggregate accounting is not implemented.
+- Case-level dual-run coordinator `executeCaseTribunals`: resolves the two durable Runs from persistence, starts `SAME_MODEL` and `MIXED_MODELS` concurrently, and keeps their outcomes independent.
+- Persisted results read model under `lib/results`: reconstructs Case metadata, both Runs, validated Advocate/Judge outputs, attempt history, and agent/stage/run/Case token-cost totals from `model_calls`. Each total is a known subtotal plus per-metric completeness. Duplicate successes and inconsistent `SUCCEEDED` Runs fail closed. Does not execute models or replace a persisted `final_verdict`.
 
 Not implemented:
 
-- Token/cost aggregation services.
 - Execution API, results UI, past-Case listing, and deployment.
-- Tribunal result UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
 
@@ -371,7 +370,11 @@ Completed: `executeTribunalRun` sequences the existing Advocate and Judge stages
 
 ## Dual-run Case orchestration
 
-Completed: `executeCaseTribunals` resolves the Case’s existing `SAME_MODEL` and `MIXED_MODELS` Runs from persistence and starts both through `executeTribunalRun` concurrently. Invalid topology fails before any model request. Run outcomes stay independent. Token/cost aggregation, the execution API, and results UI remain later.
+Completed: `executeCaseTribunals` resolves the Case’s existing `SAME_MODEL` and `MIXED_MODELS` Runs from persistence and starts both through `executeTribunalRun` concurrently. Invalid topology fails before any model request. Run outcomes stay independent.
+
+## Results read model and accounting
+
+Completed: `getCaseResults` reconstructs Case results from persisted Case, Run, and Model Call rows. Validated outputs come from `model_calls.validated_response`. Accounting totals are `{ value, complete }` per metric at agent, stage, run, and Case levels. A known subtotal is kept when some attempts are unknown. Inconsistent `SUCCEEDED` data fails closed. The execution API and results UI remain later.
 
 ## Phase 7 — Dual-run coordination, retries, durable results, and Case totals
 
