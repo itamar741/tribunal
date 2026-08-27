@@ -16,6 +16,8 @@ import {
   withClient,
   withTransaction,
 } from "../db";
+import { executeRepresentativeAttempt } from "../ai/execution";
+import { RepresentativeRole } from "../ai/profiles";
 import { PostgresModelCallRepository } from "../model-calls";
 import {
   ModelCallAgentRole,
@@ -64,6 +66,7 @@ loadLocalEnv();
 const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
 const PHASE2_FILE_PREFIX = "phase2-verify-";
 const PHASE4A_FILE_PREFIX = "phase4a-verify-";
+const PHASE4B_FILE_PREFIX = "phase4b-verify-";
 
 function isCheckViolation(error: unknown): boolean {
   return error instanceof DatabaseError && error.code === "23514";
@@ -126,8 +129,12 @@ describe("PostgreSQL persistence", {
 }, () => {
   after(async () => {
     await query(
-      "delete from cases where original_file_name like $1 or original_file_name like $2",
-      [`${PHASE2_FILE_PREFIX}%`, `${PHASE4A_FILE_PREFIX}%`],
+      "delete from cases where original_file_name like $1 or original_file_name like $2 or original_file_name like $3",
+      [
+        `${PHASE2_FILE_PREFIX}%`,
+        `${PHASE4A_FILE_PREFIX}%`,
+        `${PHASE4B_FILE_PREFIX}%`,
+      ],
     );
     await closePool();
   });
@@ -896,6 +903,72 @@ describe("PostgreSQL persistence", {
           ),
         isForeignKeyViolation,
       );
+    });
+  });
+
+  describe("Phase 4B one-agent audit slice", () => {
+    it("persists one mocked DEFENSE_1 attempt without completing the run", async () => {
+      const cases = new PostgresCaseRepository();
+      const runs = new PostgresTribunalRunRepository();
+      const modelCalls = new PostgresModelCallRepository();
+      const created = await cases.create({
+        originalFileName: `${PHASE4B_FILE_PREFIX}mocked-defense-1.md`,
+        chargeSheetText: "# Case T-TEST\n\nThe accused killed the deceased.",
+      });
+      const sameModelRun = created.runs.find(
+        (run) => run.runType === TribunalRunKind.SAME_MODEL,
+      );
+      assert.ok(sameModelRun);
+
+      const validated = advocateResponse();
+      const result = await executeRepresentativeAttempt(
+        {
+          caseId: created.id,
+          runId: sameModelRun.id,
+          runKind: TribunalRunKind.SAME_MODEL,
+          role: RepresentativeRole.DEFENSE_1,
+          chargeSheetMarkdown: created.chargeSheetText,
+          apiKey: "unused-in-mocked-transport",
+        },
+        {
+          modelCalls,
+          runs,
+          completeChat: async () => ({
+            ok: true,
+            content: JSON.stringify(validated),
+            returnedModel: "minimax/minimax-m3:free",
+            providerCallId: "gen-phase4b-mock",
+            generationId: null,
+            usage: {
+              promptTokens: 21,
+              completionTokens: 9,
+              totalTokens: 30,
+              totalCost: "0",
+            },
+            durationMs: 640,
+          }),
+        },
+      );
+
+      assert.equal(result.record.status, ModelCallStatus.SUCCEEDED);
+      assert.equal(result.record.agentRole, ModelCallAgentRole.DEFENSE_1);
+      assert.equal(result.record.stage, ModelCallStage.ADVOCATES);
+      assert.equal(result.record.attempt, 1);
+      assert.equal(result.record.model, "minimax/minimax-m3:free");
+      assert.deepEqual(result.record.validatedResponse, validated);
+      assert.equal(result.record.providerCallId, "gen-phase4b-mock");
+      assert.equal(result.record.inputCost, null);
+      assert.equal(result.record.outputCost, null);
+      assert.equal(result.record.totalCost, "0");
+
+      const stored = await modelCalls.listByRunId(sameModelRun.id);
+      assert.equal(stored.length, 1);
+      assert.deepEqual(stored[0].validatedResponse, validated);
+
+      const run = await runs.getById(sameModelRun.id);
+      assert.ok(run);
+      assert.equal(run.status, TribunalRunStatus.RUNNING);
+      assert.equal(run.finalVerdict, null);
     });
   });
 });

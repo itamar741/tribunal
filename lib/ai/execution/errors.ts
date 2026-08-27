@@ -1,0 +1,12 @@
+export const AttemptErrorType = {
+  TIMEOUT: "TIMEOUT",
+  NETWORK: "NETWORK",
+  HTTP_ERROR: "HTTP_ERROR",
+  PROVIDER_RESPONSE_ERROR: "PROVIDER_RESPONSE_ERROR",
+  INVALID_RESPONSE: "INVALID_RESPONSE",
+  MALFORMED_JSON: "MALFORMED_JSON",
+  CONTRACT_VALIDATION: "CONTRACT_VALIDATION",
+} as const;
+
+export type AttemptErrorType =
+  (typeof AttemptErrorType)[keyof typeof AttemptErrorType];

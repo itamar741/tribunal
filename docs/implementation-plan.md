@@ -31,12 +31,12 @@ Completed and verified:
 - Seven instructor profiles version-controlled under `lib/ai/profiles/`: Jon Snow and Tyrion Lannister (defense), Daenerys Targaryen and Grey Worm (prosecution), and Aaron Barak, Menachem Elon, and Meir Shamgar (judges). Representative seats assign a procedural side only; the model reasons in character. Judge profiles are judicial-method simulations.
 - Provider-agnostic runtime prompt builders under `lib/ai/prompts/`: one representative builder and one judge builder. Trusted instructions/configuration are separated from untrusted charge-sheet and advocate content. Model IDs are not part of prompt construction.
 - Concrete OpenRouter model assignment under `lib/ai/configurations/`: one `SAME_MODEL` ID for all seven roles, seven distinct `MIXED_MODELS` IDs, and a standby pool that is not an automatic fallback. Canonical rationale: `docs/model-selection.md`.
+- One-agent OpenRouter vertical slice: representative prompt → one Chat Completions attempt → JSON parse → Advocate Zod validation → one `model_calls` audit row. No retry, remaining agents, judges, majority, or dual-run orchestration.
 
 Not implemented:
 
-- AI execution against Tribunal Runs.
-- OpenRouter integration.
-- Token/cost aggregation services, retries, advocate/judge execution, and dual-run orchestration.
+- Full AI execution against Tribunal Runs.
+- Token/cost aggregation services, retries, four-advocate/judge execution, and dual-run orchestration.
 - Tribunal result UI, past-Case listing, and deployment.
 
 ## Recommended phase sequence
@@ -236,7 +236,7 @@ One controlled call isolates gateway authentication, structured output, runtime 
 
 ### Scope
 
-- Add a narrow server-only OpenRouter adapter.
+- Completed (Phase 4B): add a narrow server-only OpenRouter adapter.
 - Treat every actual API attempt as a separate immutable source-of-truth record (write to the existing `model_calls` table).
 - Record at least:
   - Case association;
@@ -253,8 +253,8 @@ One controlled call isolates gateway authentication, structured output, runtime 
 - Record OpenRouter-reported usage/cost for every actual API attempt; do not maintain a separate pricing table unless OpenRouter cannot provide the required information.
 - Validate the response through the central advocate contract.
 - Persist validated structured output separately from audit metadata.
-- Begin with no hidden automatic retry; one invocation means one audited attempt until retry policy is implemented.
-- Add fake-provider tests and a controlled live smoke-test procedure.
+- Completed (Phase 4B): begin with no hidden automatic retry; one invocation means one audited attempt until retry policy is implemented.
+- Completed (Phase 4B): add fake-provider tests and a controlled live smoke-test procedure (`npm run verify:openrouter-slice`).
 
 ### Explicitly out of scope
 

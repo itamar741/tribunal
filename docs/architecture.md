@@ -350,7 +350,9 @@ SQLite can work for local experiments, but the settled deployment target is a ho
 
 ### OpenRouter
 
-OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). Integration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
+OpenRouter is the AI gateway for model calls and the **authoritative source** for token usage and cost on every actual API attempt. Concrete model IDs are version-controlled; see [`docs/model-selection.md`](model-selection.md). A server-only Chat Completions adapter and one-agent audited attempt exist under `lib/ai/openrouter/` and `lib/ai/execution/`. Full advocate/judge orchestration is **not** implemented in this phase. Do not maintain a separate model-pricing table unless later evidence shows OpenRouter cannot provide the required information.
+
+Structured-output request shape is selected from version-controlled model configuration (`JSON_SCHEMA`, `JSON_OBJECT`, or `PROMPT_ONLY`). The transport does not infer capability from the live catalog during a Tribunal Run. Provider-side JSON Schema or JSON mode is an aid only. Every successful Model Call still requires assistant text, JSON parse, and Zod validation. Malformed JSON is not repaired.
 
 ## Model-call audit logging
 
@@ -443,6 +445,7 @@ Retry once for:
 - timeout;
 - transient network/connection failure;
 - HTTP 429 / provider rate limiting;
+- 2xx choice-level / provider response error;
 - transient OpenRouter/provider 5xx failure;
 - malformed structured output;
 - valid JSON that fails the applicable Zod response contract;
