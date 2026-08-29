@@ -22,13 +22,13 @@ export type ModelOutputMode =
   (typeof ModelOutputMode)[keyof typeof ModelOutputMode];
 
 export const MODEL_OUTPUT_MODES = {
-  "z-ai/glm-5.2:free": ModelOutputMode.JSON_SCHEMA,
+  "openai/gpt-4.1": ModelOutputMode.JSON_SCHEMA,
   "openai/gpt-4.1-mini": ModelOutputMode.JSON_SCHEMA,
+  "meta-llama/llama-4-maverick": ModelOutputMode.JSON_SCHEMA,
   "nvidia/nemotron-3-super-120b-a12b:free": ModelOutputMode.JSON_SCHEMA,
   "minimax/minimax-m2.7:free": ModelOutputMode.JSON_OBJECT,
   "google/gemma-4-31b-it:free": ModelOutputMode.JSON_OBJECT,
   "minimax/minimax-m3:free": ModelOutputMode.JSON_OBJECT,
-  "google/gemma-4-26b-a4b-it:free": ModelOutputMode.JSON_OBJECT,
   "nvidia/nemotron-3.5-lightning:free": ModelOutputMode.PROMPT_ONLY,
   "nvidia/nemotron-3-ultra-550b-a55b:free": ModelOutputMode.PROMPT_ONLY,
   "poolside/laguna-s-2.1:free": ModelOutputMode.PROMPT_ONLY,

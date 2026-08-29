@@ -97,7 +97,7 @@ There is no writable-disk assumption. There is no process-local state required f
 
 ## OpenRouter models
 
-Most configured IDs remain `:free` endpoints. MIXED `DEFENSE_1` is the paid ID `openai/gpt-4.1-mini`. Availability, latency, rate limits, and listed prices are external and volatile. Retries lengthen the HTTP request. Provider failure is an expected Tribunal outcome (`FAILED` Run, no invented verdict). Provider-reported cost is audited. There is no automatic cross-model fallback. Do not change model selection as a deploy workaround.
+SAME_MODEL and four MIXED seats remain `:free` endpoints. MIXED `DEFENSE_1`, `JUDGE_1`, and `JUDGE_3` are the paid IDs `openai/gpt-4.1-mini`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`. Availability, latency, rate limits, and listed prices are external and volatile. Retries lengthen the HTTP request. Provider failure is an expected Tribunal outcome (`FAILED` Run, no invented verdict). Provider-reported cost is audited. There is no automatic cross-model fallback. Do not change model selection as a deploy workaround.
 
 ## Deploy procedure
 
@@ -110,7 +110,7 @@ The application is already deployed on Render Free with auto-deploy from `main`.
 
 ## Final live E2E (once)
 
-Perform this sequence **once** after deploy. It may consume 14–28 free-model requests. Do not repeat it for curiosity.
+Perform this sequence **once** after deploy. It may consume 14–28 model requests, including paid MIXED seats. Do not repeat it for curiosity.
 
 1. Verify production `schema_migrations` contains every file under `supabase/migrations/`.
 2. Open deployed `/`.

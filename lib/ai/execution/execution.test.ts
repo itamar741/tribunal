@@ -447,10 +447,14 @@ describe("outputStrategyForModel", () => {
   };
 
   it("maps configured models to explicit request strategies", () => {
-    assert.deepEqual(outputStrategyForModel("z-ai/glm-5.2:free", schema), {
+    assert.deepEqual(outputStrategyForModel("openai/gpt-4.1", schema), {
       mode: "JSON_SCHEMA",
       jsonSchema: schema,
     });
+    assert.deepEqual(
+      outputStrategyForModel("meta-llama/llama-4-maverick", schema),
+      { mode: "JSON_SCHEMA", jsonSchema: schema },
+    );
     assert.deepEqual(outputStrategyForModel("minimax/minimax-m3:free", schema), {
       mode: "JSON_OBJECT",
     });

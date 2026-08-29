@@ -122,9 +122,9 @@ describe("MIXED_MODELS assignment", () => {
       [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
       [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
-      [TribunalAgentRole.JUDGE_1]: "z-ai/glm-5.2:free",
+      [TribunalAgentRole.JUDGE_1]: "openai/gpt-4.1",
       [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
-      [TribunalAgentRole.JUDGE_3]: "google/gemma-4-26b-a4b-it:free",
+      [TribunalAgentRole.JUDGE_3]: "meta-llama/llama-4-maverick",
     });
 
     for (const role of Object.values(TribunalAgentRole)) {
@@ -137,15 +137,34 @@ describe("MIXED_MODELS assignment", () => {
 });
 
 describe("model-selection constraints", () => {
-  it("allows only the documented paid primary ID", () => {
-    assert.deepEqual(EXPLICITLY_PAID_MODEL_IDS, ["openai/gpt-4.1-mini"]);
+  it("allows only the documented paid primary IDs", () => {
+    assert.deepEqual(EXPLICITLY_PAID_MODEL_IDS, [
+      "openai/gpt-4.1-mini",
+      "openai/gpt-4.1",
+      "meta-llama/llama-4-maverick",
+    ]);
     assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1-mini"), true);
+    assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1"), true);
+    assert.equal(isExplicitlyPaidModelId("meta-llama/llama-4-maverick"), true);
     assert.equal(isExplicitlyPaidModelId("openai/gpt-oss-120b"), false);
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
       "openai/gpt-4.1-mini",
     );
+    assert.equal(
+      MIXED_MODELS_BY_ROLE[TribunalAgentRole.JUDGE_1],
+      "openai/gpt-4.1",
+    );
+    assert.equal(
+      MIXED_MODELS_BY_ROLE[TribunalAgentRole.JUDGE_3],
+      "meta-llama/llama-4-maverick",
+    );
     assert.equal(PRIMARY_MODEL_IDS.includes("openai/gpt-4.1-mini"), true);
+    assert.equal(PRIMARY_MODEL_IDS.includes("openai/gpt-4.1"), true);
+    assert.equal(
+      PRIMARY_MODEL_IDS.includes("meta-llama/llama-4-maverick"),
+      true,
+    );
     assert.equal(
       (PRIMARY_MODEL_IDS as readonly string[]).includes("openai/gpt-oss-120b"),
       false,
@@ -230,6 +249,22 @@ describe("model-selection constraints", () => {
     );
     assert.equal(
       STANDBY_MODEL_IDS.includes("liquid/lfm-2.5-2.6b:free"),
+      false,
+    );
+    assert.equal(
+      MIXED_MODELS_BY_ROLE[TribunalAgentRole.JUDGE_2],
+      "nvidia/nemotron-3-super-120b-a12b:free",
+    );
+    assert.equal(
+      (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
+        "z-ai/glm-5.2:free",
+      ),
+      false,
+    );
+    assert.equal(
+      (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
+        "google/gemma-4-26b-a4b-it:free",
+      ),
       false,
     );
     assert.equal(
@@ -331,7 +366,11 @@ describe("model output modes", () => {
     assert.deepEqual(configured, mapped);
 
     assert.equal(
-      getOutputModeForModel("z-ai/glm-5.2:free"),
+      getOutputModeForModel("openai/gpt-4.1"),
+      ModelOutputMode.JSON_SCHEMA,
+    );
+    assert.equal(
+      getOutputModeForModel("meta-llama/llama-4-maverick"),
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
@@ -351,8 +390,16 @@ describe("model output modes", () => {
       ModelOutputMode.JSON_OBJECT,
     );
     assert.equal(
-      getOutputModeForModel("google/gemma-4-26b-a4b-it:free"),
-      ModelOutputMode.JSON_OBJECT,
+      getOutputModeForModel(
+        MIXED_MODELS_BY_ROLE[TribunalAgentRole.JUDGE_1],
+      ),
+      ModelOutputMode.JSON_SCHEMA,
+    );
+    assert.equal(
+      getOutputModeForModel(
+        MIXED_MODELS_BY_ROLE[TribunalAgentRole.JUDGE_3],
+      ),
+      ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
       getOutputModeForModel(

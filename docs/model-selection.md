@@ -2,7 +2,7 @@
 
 This is the canonical rationale for the version-controlled OpenRouter model assignment. Runtime IDs live in `lib/ai/configurations/`. Profiles, prompt builders, response contracts, and UI do not contain model IDs.
 
-The current selection is **no longer all-free**. SAME_MODEL and six MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1` is an explicitly paid ID. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
+The current selection is **no longer all-free**. SAME_MODEL and four MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1`, `JUDGE_1`, and `JUDGE_3` are explicitly paid IDs. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
 
 ## Purpose
 
@@ -28,7 +28,7 @@ The current IDs below were revalidated against the live `/api/v1/models` catalog
 ## Selection constraints
 
 - **OpenRouter is the AI gateway.** All model calls go through OpenRouter.
-- **Model configuration may contain paid endpoints.** Concrete IDs, output capabilities, and current pricing must be explicitly documented and catalog-verified. Free-configured IDs must still list zero prompt and completion prices. The one current paid primary is `openai/gpt-4.1-mini`.
+- **Model configuration may contain paid endpoints.** Concrete IDs, output capabilities, and current pricing must be explicitly documented and catalog-verified. Free-configured IDs must still list zero prompt and completion prices. The current paid primaries are `openai/gpt-4.1-mini`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`.
 - **Concrete model IDs are required** for reproducibility and audit. Each configured seat must name a specific OpenRouter model identity.
 - **`openrouter/free` is inappropriate.** That router may choose different models dynamically. A Tribunal Run cannot treat a randomly selected model as a stable experimental condition.
 - **Adequate context length is required.** A run later sends the charge sheet, role/profile instructions, the response contract, and — for judges — four validated advocate outputs. The selected windows are larger than those current Tribunal inputs.
@@ -112,9 +112,9 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 | `DEFENSE_2` | `minimax/minimax-m2.7:free` | MiniMax M2.7 | `:free` | 192K (196,608) | `JSON_OBJECT` | Different MiniMax generation from M3. Tradeoff: smaller window than M3; structure is JSON mode, not JSON Schema. |
 | `PROSECUTION_1` | `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 | `:free` | 256K (262,144) | `PROMPT_ONLY` | Promoted from standby after Gemma 4 31B returned provider 429s on both allowed attempts. Tradeoff: no `response_format`; JSON parse + Zod required. |
 | `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
-| `JUDGE_1` | `z-ai/glm-5.2:free` | Z.ai GLM 5.2 | `:free` | 256K (256,000) | `JSON_SCHEMA` | Remains a distinct mixed-judge ID. Live catalog advertises schema support. Not used as an automatic fallback. |
-| `JUDGE_2` | `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super | `:free` | 256K (262,144) | `JSON_SCHEMA` | Open hybrid MoE with reasoning and schema support. No longer the SAME_MODEL baseline after the NVIDIA upstream 502. |
-| `JUDGE_3` | `google/gemma-4-26b-a4b-it:free` | Google Gemma 4 (26B A4B MoE) | `:free` | 256K (262,144) | `JSON_OBJECT` | Distinct concrete ID from `PROSECUTION_1` (MoE vs dense Gemma 4). Tradeoff: same vendor family appears twice; diversity is still seven IDs, not seven vendors. |
+| `JUDGE_1` | `openai/gpt-4.1` | OpenAI GPT-4.1 | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces `z-ai/glm-5.2:free` after both allowed deployed attempts returned upstream HTTP 429. Catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
+| `JUDGE_2` | `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super | `:free` | 256K (262,144) | `JSON_SCHEMA` | Open hybrid MoE with reasoning and schema support. Succeeded on attempt 1 in the latest deployed MIXED Judge stage and was not changed. |
+| `JUDGE_3` | `meta-llama/llama-4-maverick` | Meta Llama 4 Maverick | paid | 1M (1,048,576) | `JSON_SCHEMA` | Replaces `google/gemma-4-26b-a4b-it:free` after both allowed deployed attempts returned upstream HTTP 429. Catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 
 `JSON_SCHEMA` means the live catalog listed `structured_outputs`. `JSON_OBJECT` means `response_format` was listed without `structured_outputs`. `PROMPT_ONLY` means neither parameter was listed. These modes are versioned configuration, not permanent OpenRouter claims. In every case the application still validates with Zod before treating a response as a valid advocate or judge output.
 
@@ -238,6 +238,55 @@ A deployed MIXED `DEFENSE_1` attempt against this ID returned HTTP 400. That fai
 
 This is an explicit versioned configuration revision before a fresh Case. It is not runtime fallback.
 
+### Later deployed MIXED Advocate success and Judge-stage rate limits
+
+A later deployed Case proved that the MIXED Advocate stage now succeeds completely after the GPT-4.1 Mini schema correction:
+
+- `DEFENSE_1` / `openai/gpt-4.1-mini` succeeded.
+- `DEFENSE_2` / `minimax/minimax-m2.7:free` failed the advocate contract on attempt 1 and succeeded on attempt 2.
+- `PROSECUTION_1` / `poolside/laguna-s-2.1:free` succeeded.
+- `PROSECUTION_2` / `minimax/minimax-m3:free` succeeded.
+
+The MIXED Judge stage then failed closed because two free Judge endpoints were rate-limited on both allowed attempts:
+
+- `JUDGE_1` / `z-ai/glm-5.2:free` received HTTP 429 twice. OpenRouter reported the free upstream provider as temporarily rate-limited.
+- `JUDGE_2` / `nvidia/nemotron-3-super-120b-a12b:free` succeeded on attempt 1 and was not changed.
+- `JUDGE_3` / `google/gemma-4-26b-a4b-it:free` received HTTP 429 twice. OpenRouter reported Google AI Studio free upstream as temporarily rate-limited.
+
+Those are provider-capacity failures, not application failures. SAME_MODEL and all Advocate assignments were not changed. There is no automatic cross-model fallback.
+
+### Why MIXED `JUDGE_1` is paid GPT-4.1
+
+`openai/gpt-4.1` was selected only after live `/api/v1/models` verification on 2026-08-29:
+
+- exact ID present;
+- listed `pricing.prompt = 0.000002` and `pricing.completion = 0.000008`;
+- ~1M context (1,047,576 tokens);
+- catalog listed both `response_format` and `structured_outputs` → configured `JSON_SCHEMA`;
+- catalog listed no `reasoning`, `include_reasoning`, or `reasoning_effort` parameters;
+- output modality is text;
+- not marked agentic-harness-only.
+
+This seat is paid because the remaining MIXED failure was isolated to a free Judge endpoint that exhausted both allowed attempts with upstream 429s. Provider-reported usage/cost remains audited; execution does not calculate the charge.
+
+This is an explicit versioned configuration revision before a fresh Case. It is not runtime fallback.
+
+### Why MIXED `JUDGE_3` is paid Llama 4 Maverick
+
+`meta-llama/llama-4-maverick` was selected only after live `/api/v1/models` verification on 2026-08-29:
+
+- exact ID present;
+- listed `pricing.prompt = 0.0000002` and `pricing.completion = 0.0000008`;
+- 1M context (1,048,576 tokens);
+- catalog listed both `response_format` and `structured_outputs` → configured `JSON_SCHEMA`;
+- catalog listed no `reasoning`, `include_reasoning`, or `reasoning_effort` parameters;
+- output modality is text;
+- not marked agentic-harness-only.
+
+This seat is paid because the remaining MIXED failure was isolated to a free Judge endpoint that exhausted both allowed attempts with upstream 429s. Provider-reported usage/cost remains audited; execution does not calculate the charge.
+
+This is an explicit versioned configuration revision before a fresh Case. It is not runtime fallback.
+
 ### Why MIXED `PROSECUTION_1` is Laguna S 2.1
 
 `poolside/laguna-s-2.1:free` was previously standby slot 2. It is now a primary mixed seat because:
@@ -296,9 +345,11 @@ Later execution must record the actual model identity returned by OpenRouter so 
 
 ## Cost rationale
 
-- SAME_MODEL, the other six MIXED seats, and the standby pool remain `:free` IDs and must still list zero prompt/completion prices in the live catalog.
+- SAME_MODEL, the other four MIXED seats, and the standby pool remain `:free` IDs and must still list zero prompt/completion prices in the live catalog.
 - MIXED `DEFENSE_1` is the paid ID `openai/gpt-4.1-mini`. On 2026-08-29 the catalog listed `pricing.prompt = 0.0000004` and `pricing.completion = 0.0000016`.
-- Provider-reported usage and cost for that Model Call are persisted as returned. Execution does not calculate the charge.
+- MIXED `JUDGE_1` is the paid ID `openai/gpt-4.1`. On 2026-08-29 the catalog listed `pricing.prompt = 0.000002` and `pricing.completion = 0.000008`.
+- MIXED `JUDGE_3` is the paid ID `meta-llama/llama-4-maverick`. On 2026-08-29 the catalog listed `pricing.prompt = 0.0000002` and `pricing.completion = 0.0000008`.
+- Provider-reported usage and cost for those Model Calls are persisted as returned. Execution does not calculate the charge.
 - Free requests remain subject to OpenRouter limits and availability. Capacity, latency, rate limits, and listed prices can change without notice.
 - Zero price on free-configured IDs is a current operational property, not a permanent product guarantee.
 
@@ -317,6 +368,16 @@ Free endpoints can differ from paid endpoints — and from each other — in log
 This document does not resolve the project’s broader retention/privacy decision for persisted charge-sheet text.
 
 ## Research snapshot
+
+**Research snapshot: 2026-08-29 (MIXED `JUDGE_1` and `JUDGE_3` revised to paid endpoints after deployed 429s)**
+
+- The MIXED Advocate stage completed successfully in a later deployed Case. SAME_MODEL and all Advocate assignments were not changed.
+- MIXED `JUDGE_1` `z-ai/glm-5.2:free` failed both allowed attempts with HTTP 429; OpenRouter reported the free upstream as temporarily rate-limited.
+- MIXED `JUDGE_2` `nvidia/nemotron-3-super-120b-a12b:free` succeeded on attempt 1 and remains unchanged.
+- MIXED `JUDGE_3` `google/gemma-4-26b-a4b-it:free` failed both allowed attempts with HTTP 429; OpenRouter reported Google AI Studio free upstream as temporarily rate-limited.
+- `openai/gpt-4.1` was present with non-zero `pricing.prompt = 0.000002`, `pricing.completion = 0.000008`, `response_format`, `structured_outputs`, ~1M context (1,047,576), and text output. Configured `JSON_SCHEMA`.
+- `meta-llama/llama-4-maverick` was present with non-zero `pricing.prompt = 0.0000002`, `pricing.completion = 0.0000008`, `response_format`, `structured_outputs`, 1M context (1,048,576), and text output. Configured `JSON_SCHEMA`.
+- Neither replacement is automatic runtime fallback. Cost remains provider-reported and audited.
 
 **Research snapshot: 2026-08-29 (MIXED `DEFENSE_1` revised to paid `openai/gpt-4.1-mini` after GPT-OSS null content)**
 

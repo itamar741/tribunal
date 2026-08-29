@@ -28,7 +28,11 @@ export const SAME_MODEL_BY_ROLE = {
  * Explicitly paid catalog IDs. Every other configured primary and
  * standby ID must remain a zero-price endpoint.
  */
-export const EXPLICITLY_PAID_MODEL_IDS = ["openai/gpt-4.1-mini"] as const;
+export const EXPLICITLY_PAID_MODEL_IDS = [
+  "openai/gpt-4.1-mini",
+  "openai/gpt-4.1",
+  "meta-llama/llama-4-maverick",
+] as const;
 
 export function isExplicitlyPaidModelId(modelId: string): boolean {
   return (EXPLICITLY_PAID_MODEL_IDS as readonly string[]).includes(modelId);
@@ -39,9 +43,9 @@ export const MIXED_MODELS_BY_ROLE = {
   [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
   [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
   [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
-  [TribunalAgentRole.JUDGE_1]: "z-ai/glm-5.2:free",
+  [TribunalAgentRole.JUDGE_1]: "openai/gpt-4.1",
   [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
-  [TribunalAgentRole.JUDGE_3]: "google/gemma-4-26b-a4b-it:free",
+  [TribunalAgentRole.JUDGE_3]: "meta-llama/llama-4-maverick",
 } as const;
 
 /**
