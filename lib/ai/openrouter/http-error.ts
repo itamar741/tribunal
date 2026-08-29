@@ -6,6 +6,8 @@ export type OpenRouterHttpErrorDetail = {
   errorCode: string | null;
   providerErrorType: string | null;
   providerCode: string | null;
+  providerName: string | null;
+  upstreamRaw: string | null;
 };
 
 function looksSensitive(value: string): boolean {
@@ -49,17 +51,39 @@ export function readSafeMessage(value: unknown): string | null {
   return sanitizeOpenRouterErrorText(value.trim());
 }
 
+function readUpstreamRaw(value: unknown): string | null {
+  const asMessage = readSafeMessage(value);
+  if (asMessage) {
+    return asMessage;
+  }
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  return readSafeMessage(record.message) ?? readSafeMessage(record.error);
+}
+
 export function readWhitelistedMetadata(metadata: unknown): {
   providerErrorType: string | null;
   providerCode: string | null;
+  providerName: string | null;
+  upstreamRaw: string | null;
 } {
   if (metadata == null || typeof metadata !== "object") {
-    return { providerErrorType: null, providerCode: null };
+    return {
+      providerErrorType: null,
+      providerCode: null,
+      providerName: null,
+      upstreamRaw: null,
+    };
   }
   const record = metadata as Record<string, unknown>;
   return {
     providerErrorType: readSafeToken(record.error_type),
     providerCode: readSafeToken(record.provider_code),
+    providerName:
+      readSafeToken(record.provider_name) ?? readSafeToken(record.provider),
+    upstreamRaw: readUpstreamRaw(record.raw),
   };
 }
 
@@ -99,6 +123,8 @@ export type OpenRouterErrorObject = {
   message: string | null;
   providerErrorType: string | null;
   providerCode: string | null;
+  providerName: string | null;
+  upstreamRaw: string | null;
 };
 
 export function parseOpenRouterErrorObject(
@@ -110,6 +136,8 @@ export function parseOpenRouterErrorObject(
       message: readSafeMessage(error),
       providerErrorType: null,
       providerCode: null,
+      providerName: null,
+      upstreamRaw: null,
     };
   }
   if (error == null || typeof error !== "object") {
@@ -118,18 +146,21 @@ export function parseOpenRouterErrorObject(
       message: null,
       providerErrorType: null,
       providerCode: null,
+      providerName: null,
+      upstreamRaw: null,
     };
   }
 
   const record = error as Record<string, unknown>;
-  const { providerErrorType, providerCode } = readWhitelistedMetadata(
-    record.metadata,
-  );
+  const { providerErrorType, providerCode, providerName, upstreamRaw } =
+    readWhitelistedMetadata(record.metadata);
   return {
     errorCode: readSafeToken(record.code),
     message: readSafeMessage(record.message),
     providerErrorType,
     providerCode,
+    providerName,
+    upstreamRaw,
   };
 }
 
@@ -146,6 +177,8 @@ export function parseOpenRouterHttpError(
       errorCode: null,
       providerErrorType: null,
       providerCode: null,
+      providerName: null,
+      upstreamRaw: null,
     };
   }
 
@@ -157,6 +190,8 @@ export function parseOpenRouterHttpError(
       errorCode: null,
       providerErrorType: null,
       providerCode: null,
+      providerName: null,
+      upstreamRaw: null,
     };
   }
 
@@ -165,12 +200,16 @@ export function parseOpenRouterHttpError(
   const message = parsedError.message;
   const providerErrorType = parsedError.providerErrorType;
   const providerCode = parsedError.providerCode;
+  const providerName = parsedError.providerName;
+  const upstreamRaw = parsedError.upstreamRaw;
   const hint = readRateLimitHint(headers);
 
   const extras = [
     errorCode ? `code=${errorCode}` : null,
     providerErrorType ? `error_type=${providerErrorType}` : null,
     providerCode ? `provider_code=${providerCode}` : null,
+    providerName ? `provider=${providerName}` : null,
+    upstreamRaw ? `raw=${upstreamRaw}` : null,
     hint,
   ].filter((part): part is string => part != null);
 
@@ -184,5 +223,7 @@ export function parseOpenRouterHttpError(
     errorCode,
     providerErrorType,
     providerCode,
+    providerName,
+    upstreamRaw,
   };
 }

@@ -234,6 +234,8 @@ A later deployed Case used `openai/gpt-oss-120b` as MIXED `DEFENSE_1`. Both allo
 
 GPT-4.1 Mini is a conventional text-output model with JSON Schema support and high current availability. It was chosen after two free/paid reasoning-style endpoints (Liquid and GPT-OSS) returned null assistant content. Provider-reported usage/cost remains audited; execution does not calculate the charge.
 
+A deployed MIXED `DEFENSE_1` attempt against this ID returned HTTP 400. That failure was traced to Tribunal-generated draft-07 tuple JSON Schema (`items: [schema, schema, schema]`) for exact-length Advocate `arguments`. The logical exact-three contract did not change. Provider JSON Schema now uses a homogeneous `items` object plus `minItems`/`maxItems`. Zod remains authoritative. GPT-4.1 Mini is not treated as an incompatible model on that evidence.
+
 This is an explicit versioned configuration revision before a fresh Case. It is not runtime fallback.
 
 ### Why MIXED `PROSECUTION_1` is Laguna S 2.1

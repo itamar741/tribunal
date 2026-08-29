@@ -354,6 +354,8 @@ OpenRouter is the AI gateway for model calls and the **authoritative source** fo
 
 Structured-output request shape is selected from version-controlled model configuration (`JSON_SCHEMA`, `JSON_OBJECT`, or `PROMPT_ONLY`). The transport does not infer capability from the live catalog during a Tribunal Run. Provider-side JSON Schema or JSON mode is an aid only. Every successful Model Call still requires assistant text, JSON parse, and Zod validation. Malformed JSON is not repaired.
 
+Exact-length homogeneous collections (`arguments`, `key_reasons`) remain “exactly three” at the Zod contract. Provider JSON Schema exports a single `items` schema plus `minItems`/`maxItems`, not draft-07 tuple `items: [...]`. Zod remains the authoritative validator.
+
 ## Model-call audit logging
 
 Every actual model API attempt is an individual immutable audit/accounting record. A retry is another attempt and therefore another record. Failed attempts that incurred tokens or cost remain part of actual usage.

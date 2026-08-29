@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  ADVOCATE_RESPONSE_JSON_SCHEMA_NAME,
+  JUDGE_RESPONSE_JSON_SCHEMA_NAME,
+  advocateResponseJsonSchema,
   advocateResponseSchema,
+  judgeResponseJsonSchema,
   judgeResponseSchema,
 } from "./index";
 
@@ -310,5 +314,66 @@ describe("judgeResponseSchema", () => {
 
     assert.equal(emptyReason.success, false);
     assert.equal(whitespaceReason.success, false);
+  });
+});
+
+function assertOpenAiCompatibleExactLengthArray(
+  field: unknown,
+  expectedItemType: "object" | "string",
+) {
+  assert.equal(typeof field, "object");
+  assert.ok(field !== null);
+  const schema = field as Record<string, unknown>;
+  assert.equal(schema.type, "array");
+  assert.equal(
+    Array.isArray(schema.items),
+    false,
+    "OpenAI-compatible schemas require a single items object, not a tuple items array",
+  );
+  assert.equal(typeof schema.items, "object");
+  assert.ok(schema.items !== null);
+  assert.equal(schema.minItems, 3);
+  assert.equal(schema.maxItems, 3);
+  const items = schema.items as Record<string, unknown>;
+  assert.equal(items.type, expectedItemType);
+}
+
+describe("advocateResponseJsonSchema provider compatibility", () => {
+  it("exports a homogeneous exact-length arguments array, not a tuple", () => {
+    const schema = advocateResponseJsonSchema();
+    const properties = schema.properties as Record<string, unknown>;
+
+    assert.equal(schema.type, "object");
+    assert.equal(schema.additionalProperties, false);
+    assert.deepEqual(schema.required, ["summary", "arguments", "conclusion"]);
+    assert.equal("$schema" in schema, false);
+
+    assertOpenAiCompatibleExactLengthArray(properties.arguments, "object");
+    const argumentsSchema = properties.arguments as {
+      items: Record<string, unknown>;
+    };
+    assert.equal(argumentsSchema.items.additionalProperties, false);
+    assert.deepEqual(argumentsSchema.items.required, ["title", "argument"]);
+  });
+});
+
+describe("judgeResponseJsonSchema provider compatibility", () => {
+  it("exports a homogeneous exact-length key_reasons array, not a tuple", () => {
+    const schema = judgeResponseJsonSchema();
+    const properties = schema.properties as Record<string, unknown>;
+
+    assert.equal(schema.type, "object");
+    assert.equal(schema.additionalProperties, false);
+    assert.deepEqual(schema.required, ["verdict", "summary", "key_reasons"]);
+    assert.equal("$schema" in schema, false);
+
+    assertOpenAiCompatibleExactLengthArray(properties.key_reasons, "string");
+  });
+});
+
+describe("generated JSON Schema names", () => {
+  it("keeps the JSON_SCHEMA request names unchanged", () => {
+    assert.equal(ADVOCATE_RESPONSE_JSON_SCHEMA_NAME, "advocate_response");
+    assert.equal(JUDGE_RESPONSE_JSON_SCHEMA_NAME, "judge_response");
   });
 });

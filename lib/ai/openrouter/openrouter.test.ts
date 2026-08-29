@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import {
+  ADVOCATE_RESPONSE_JSON_SCHEMA_NAME,
+  JUDGE_RESPONSE_JSON_SCHEMA_NAME,
+  advocateResponseJsonSchema,
+  judgeResponseJsonSchema,
+} from "../contracts";
 import { SAME_MODEL_ID } from "../configurations";
 import { completeChat } from "./client";
 import { parseOpenRouterHttpError } from "./http-error";
@@ -155,6 +161,121 @@ describe("completeChat", () => {
     assert.equal(result.generationId, null);
     assert.equal(result.usage.totalCost, "0");
     assert.equal(OPENROUTER_ATTEMPT_TIMEOUT_MS, 90_000);
+  });
+
+  it("embeds generated Advocate and Judge schemas without tuple items", async () => {
+    const capturedBodies: unknown[] = [];
+    const fetchImpl: typeof fetch = async (_url, init) => {
+      capturedBodies.push(JSON.parse(String(init?.body)));
+      return jsonResponse({
+        id: "gen-schema",
+        model: MODEL,
+        choices: [{ message: { role: "assistant", content: "{}" } }],
+      });
+    };
+
+    await completeChat(
+      {
+        model: MODEL,
+        messages: [{ role: "user", content: "hello" }],
+        output: {
+          mode: OpenRouterOutputMode.JSON_SCHEMA,
+          jsonSchema: {
+            name: ADVOCATE_RESPONSE_JSON_SCHEMA_NAME,
+            schema: advocateResponseJsonSchema(),
+          },
+        },
+      },
+      { apiKey: API_KEY, fetchImpl },
+    );
+    await completeChat(
+      {
+        model: MODEL,
+        messages: [{ role: "user", content: "hello" }],
+        output: {
+          mode: OpenRouterOutputMode.JSON_SCHEMA,
+          jsonSchema: {
+            name: JUDGE_RESPONSE_JSON_SCHEMA_NAME,
+            schema: judgeResponseJsonSchema(),
+          },
+        },
+      },
+      { apiKey: API_KEY, fetchImpl },
+    );
+
+    assert.equal(capturedBodies.length, 2);
+    const [advocateBody, judgeBody] = capturedBodies as [
+      {
+        response_format: {
+          type: string;
+          json_schema: {
+            name: string;
+            strict: boolean;
+            schema: {
+              properties: {
+                arguments: { items: unknown; minItems: number; maxItems: number };
+              };
+            };
+          };
+        };
+        provider: { require_parameters: boolean };
+      },
+      {
+        response_format: {
+          type: string;
+          json_schema: {
+            name: string;
+            strict: boolean;
+            schema: {
+              properties: {
+                key_reasons: { items: unknown; minItems: number; maxItems: number };
+              };
+            };
+          };
+        };
+        provider: { require_parameters: boolean };
+      },
+    ];
+
+    assert.equal(advocateBody.response_format.type, "json_schema");
+    assert.equal(advocateBody.response_format.json_schema.strict, true);
+    assert.equal(
+      advocateBody.response_format.json_schema.name,
+      ADVOCATE_RESPONSE_JSON_SCHEMA_NAME,
+    );
+    assert.equal(advocateBody.provider.require_parameters, true);
+    assert.equal(
+      Array.isArray(advocateBody.response_format.json_schema.schema.properties.arguments.items),
+      false,
+    );
+    assert.equal(
+      advocateBody.response_format.json_schema.schema.properties.arguments.minItems,
+      3,
+    );
+    assert.equal(
+      advocateBody.response_format.json_schema.schema.properties.arguments.maxItems,
+      3,
+    );
+
+    assert.equal(judgeBody.response_format.type, "json_schema");
+    assert.equal(judgeBody.response_format.json_schema.strict, true);
+    assert.equal(
+      judgeBody.response_format.json_schema.name,
+      JUDGE_RESPONSE_JSON_SCHEMA_NAME,
+    );
+    assert.equal(judgeBody.provider.require_parameters, true);
+    assert.equal(
+      Array.isArray(judgeBody.response_format.json_schema.schema.properties.key_reasons.items),
+      false,
+    );
+    assert.equal(
+      judgeBody.response_format.json_schema.schema.properties.key_reasons.minItems,
+      3,
+    );
+    assert.equal(
+      judgeBody.response_format.json_schema.schema.properties.key_reasons.maxItems,
+      3,
+    );
   });
 
   it("sends json_object response_format without a schema", async () => {
@@ -790,6 +911,69 @@ describe("completeChat", () => {
     assert.doesNotMatch(result.errorMessage, new RegExp(secretKey));
     assert.doesNotMatch(result.errorMessage, /another secret prompt body/);
   });
+
+  it("keeps safe HTTP 400 provider and routing metadata without prompts", async () => {
+    const secretKey = "sk-or-v1-http-400-secret";
+    const prompt = "SECRET_400_PROMPT charge sheet facts";
+    const result = await completeChat(
+      {
+        model: MODEL,
+        messages: [{ role: "user", content: prompt }],
+        output: SCHEMA_OUTPUT,
+      },
+      {
+        apiKey: secretKey,
+        fetchImpl: async () =>
+          new Response(
+            JSON.stringify({
+              id: "gen-http-400-body",
+              error: {
+                code: 400,
+                message: "Provider returned error",
+                metadata: {
+                  provider_name: "OpenAI",
+                  raw: "Invalid schema for response_format 'advocate_response': In context=('properties', 'arguments'), 'items' must be an object.",
+                  flagged_input: prompt,
+                },
+              },
+              openrouter_metadata: {
+                requested: MODEL,
+                strategy: "direct",
+                endpoints: {
+                  available: [
+                    { provider: "OpenAI", model: MODEL, selected: true },
+                  ],
+                },
+                attempts: [{ provider: "OpenAI", model: MODEL, status: 400 }],
+              },
+            }),
+            {
+              status: 400,
+              headers: {
+                "content-type": "application/json",
+                "x-generation-id": "gen-http-400-header",
+              },
+            },
+          ),
+      },
+    );
+
+    assert.equal(result.ok, false);
+    if (result.ok) {
+      return;
+    }
+    assert.equal(result.errorType, OpenRouterTransportErrorType.HTTP_ERROR);
+    assert.equal(result.httpStatus, 400);
+    assert.equal(result.generationId, "gen-http-400-header");
+    assert.equal(result.routing?.selectedProvider, "OpenAI");
+    assert.equal(result.routing?.attemptStatuses, "OpenAI:400");
+    assert.match(result.errorMessage, /provider=OpenAI/);
+    assert.match(result.errorMessage, /must be an object/);
+    assert.match(result.errorMessage, /generation_id=gen-http-400-header/);
+    assert.match(result.errorMessage, /selected_provider=OpenAI/);
+    assert.doesNotMatch(result.errorMessage, /SECRET_400_PROMPT/);
+    assert.doesNotMatch(result.errorMessage, new RegExp(secretKey));
+  });
 });
 
 describe("parseOpenRouterHttpError", () => {
@@ -815,5 +999,28 @@ describe("parseOpenRouterHttpError", () => {
     assert.doesNotMatch(detail.errorMessage, /leaked-token/);
     assert.doesNotMatch(detail.errorMessage, /full prompt text/);
     assert.doesNotMatch(detail.errorMessage, /the accused killed/);
+  });
+
+  it("retains safe provider name and upstream raw on HTTP 400", () => {
+    const detail = parseOpenRouterHttpError(400, {
+      error: {
+        code: 400,
+        message: "Provider returned error",
+        metadata: {
+          provider_name: "OpenAI",
+          provider_code: 400,
+          raw: "Invalid schema for response_format 'advocate_response': items must be an object.",
+          flagged_input: "full prompt text that must not leak",
+        },
+      },
+    });
+
+    assert.equal(detail.errorCode, "400");
+    assert.equal(detail.providerName, "OpenAI");
+    assert.equal(detail.providerCode, "400");
+    assert.match(detail.errorMessage, /Provider returned error/);
+    assert.match(detail.errorMessage, /provider=OpenAI/);
+    assert.match(detail.errorMessage, /items must be an object/);
+    assert.doesNotMatch(detail.errorMessage, /full prompt text/);
   });
 });

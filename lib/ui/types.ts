@@ -26,14 +26,14 @@ export type AdvocateArgumentView = {
 
 export type AdvocateResponseView = {
   summary: string;
-  arguments: [AdvocateArgumentView, AdvocateArgumentView, AdvocateArgumentView];
+  arguments: AdvocateArgumentView[];
   conclusion: string;
 };
 
 export type JudgeResponseView = {
   verdict: "JUSTIFIED" | "NOT_JUSTIFIED";
   summary: string;
-  key_reasons: [string, string, string];
+  key_reasons: string[];
 };
 
 export type RepresentativeRoleView =

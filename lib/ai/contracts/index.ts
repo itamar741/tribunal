@@ -19,11 +19,9 @@ const advocateArgumentSchema = z.strictObject({
 
 export const advocateResponseSchema = z.strictObject({
   summary: nonEmptyString,
-  arguments: z.tuple([
-    advocateArgumentSchema,
-    advocateArgumentSchema,
-    advocateArgumentSchema,
-  ]),
+  // Homogeneous array + exact length, not a tuple: OpenAI-compatible
+  // JSON Schema requires a single `items` object plus minItems/maxItems.
+  arguments: z.array(advocateArgumentSchema).length(3),
   conclusion: nonEmptyString,
 });
 
@@ -32,7 +30,9 @@ export const judgeVerdictSchema = z.enum(["JUSTIFIED", "NOT_JUSTIFIED"]);
 export const judgeResponseSchema = z.strictObject({
   verdict: judgeVerdictSchema,
   summary: nonEmptyString,
-  key_reasons: z.tuple([nonEmptyString, nonEmptyString, nonEmptyString]),
+  // Homogeneous array + exact length, not a tuple: OpenAI-compatible
+  // JSON Schema requires a single `items` object plus minItems/maxItems.
+  key_reasons: z.array(nonEmptyString).length(3),
 });
 
 export type AdvocateResponse = z.infer<typeof advocateResponseSchema>;
@@ -54,16 +54,6 @@ export function advocateResponseJsonSchema(): Record<string, unknown> {
 
   delete schema.$schema;
 
-  const properties = schema.properties as
-    | Record<string, Record<string, unknown>>
-    | undefined;
-  const argumentsSchema = properties?.arguments;
-  if (argumentsSchema && Array.isArray(argumentsSchema.items)) {
-    const length = argumentsSchema.items.length;
-    argumentsSchema.minItems = length;
-    argumentsSchema.maxItems = length;
-  }
-
   return schema;
 }
 
@@ -78,16 +68,6 @@ export function judgeResponseJsonSchema(): Record<string, unknown> {
   }) as Record<string, unknown>;
 
   delete schema.$schema;
-
-  const properties = schema.properties as
-    | Record<string, Record<string, unknown>>
-    | undefined;
-  const reasonsSchema = properties?.key_reasons;
-  if (reasonsSchema && Array.isArray(reasonsSchema.items)) {
-    const length = reasonsSchema.items.length;
-    reasonsSchema.minItems = length;
-    reasonsSchema.maxItems = length;
-  }
 
   return schema;
 }

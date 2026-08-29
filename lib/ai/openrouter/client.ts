@@ -11,6 +11,7 @@ import { parseOpenRouterHttpError, readRetryAfterHeader } from "./http-error";
 import {
   formatInvalidResponseMessage,
   formatProviderResponseError,
+  formatRoutingSummary,
   hasProviderResponseError,
   parseOpenRouterCompletion,
 } from "./parse-completion";
@@ -119,10 +120,23 @@ export async function completeChat(
         parsed,
         response.headers,
       );
+      const identityExtras = [
+        completion.generationId
+          ? `generation_id=${completion.generationId}`
+          : null,
+        completion.providerCallId &&
+        completion.providerCallId !== completion.generationId
+          ? `provider_call_id=${completion.providerCallId}`
+          : null,
+        formatRoutingSummary(completion.routing),
+      ].filter((part): part is string => part != null);
       return {
         ok: false,
         errorType: OpenRouterTransportErrorType.HTTP_ERROR,
-        errorMessage: detail.errorMessage,
+        errorMessage:
+          identityExtras.length > 0
+            ? `${detail.errorMessage} (${identityExtras.join(", ")})`
+            : detail.errorMessage,
         httpStatus: response.status,
         retryAfterHeader: readRetryAfterHeader(response.headers),
         errorCode: detail.errorCode,

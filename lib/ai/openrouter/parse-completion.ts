@@ -127,6 +127,8 @@ function emptyError(): ParsedOpenRouterChoiceError {
     message: null,
     providerErrorType: null,
     providerCode: null,
+    providerName: null,
+    upstreamRaw: null,
   };
 }
 
@@ -368,6 +370,8 @@ export function formatProviderResponseError(
     source.errorCode ? `code=${source.errorCode}` : null,
     source.providerErrorType ? `error_type=${source.providerErrorType}` : null,
     source.providerCode ? `provider_code=${source.providerCode}` : null,
+    source.providerName ? `provider=${source.providerName}` : null,
+    source.upstreamRaw ? `raw=${source.upstreamRaw}` : null,
     completion.finishReason
       ? `finish_reason=${completion.finishReason}`
       : null,
