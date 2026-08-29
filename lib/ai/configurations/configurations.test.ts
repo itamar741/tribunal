@@ -116,7 +116,7 @@ describe("MIXED_MODELS assignment", () => {
     assert.equal(modelIds.length, 7);
     assert.equal(new Set(modelIds).size, 7);
     assert.deepEqual(MIXED_MODELS_BY_ROLE, {
-      [TribunalAgentRole.DEFENSE_1]: "dots-studio/dots-3-note-preview:free",
+      [TribunalAgentRole.DEFENSE_1]: "liquid/lfm-2.5-2.6b:free",
       [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
       [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
@@ -179,7 +179,17 @@ describe("model-selection constraints", () => {
     );
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
-      "dots-studio/dots-3-note-preview:free",
+      "liquid/lfm-2.5-2.6b:free",
+    );
+    assert.equal(
+      (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
+        "dots-studio/dots-3-note-preview:free",
+      ),
+      false,
+    );
+    assert.equal(
+      STANDBY_MODEL_IDS.includes("dots-studio/dots-3-note-preview:free"),
+      false,
     );
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.PROSECUTION_1],
@@ -310,7 +320,7 @@ describe("model output modes", () => {
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
-      getOutputModeForModel("dots-studio/dots-3-note-preview:free"),
+      getOutputModeForModel("liquid/lfm-2.5-2.6b:free"),
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(

@@ -108,7 +108,7 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 
 | Tribunal role | Concrete model ID | Provider / family | Free | Context size | Structured-output level | Selection rationale / tradeoff |
 | --- | --- | --- | --- | --- | --- | --- |
-| `DEFENSE_1` | `dots-studio/dots-3-note-preview:free` | Dots Studio Dots3-Note Preview | `:free` | 512K (512,000) | `JSON_SCHEMA` | Replaces Nemotron 3.5 Lightning after a deployed TIMEOUT then `MALFORMED_JSON`. Live catalog lists `response_format` and `structured_outputs`. Temporary: free endpoint expires 2026-09-30. |
+| `DEFENSE_1` | `liquid/lfm-2.5-2.6b:free` | Liquid AI LFM2.5-2.6B | `:free` | 64K (65,536) | `JSON_SCHEMA` | Replaces Dots3 after a deployed HTTP 400. Live catalog lists `response_format` and `structured_outputs`. Course/MVP only: prompts/outputs may be retained to train Liquid models. |
 | `DEFENSE_2` | `minimax/minimax-m2.7:free` | MiniMax M2.7 | `:free` | 192K (196,608) | `JSON_OBJECT` | Different MiniMax generation from M3. Tradeoff: smaller window than M3; structure is JSON mode, not JSON Schema. |
 | `PROSECUTION_1` | `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 | `:free` | 256K (262,144) | `PROMPT_ONLY` | Promoted from standby after Gemma 4 31B returned provider 429s on both allowed attempts. Tradeoff: no `response_format`; JSON parse + Zod required. |
 | `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
@@ -160,7 +160,7 @@ That selection remains historically correct. It is no longer the primary mixed d
 
 Lightning was therefore removed from the primary MIXED assignment and recorded as standby only. No automatic fallback occurred.
 
-### Why MIXED `DEFENSE_1` is Dots3-Note Preview
+### Why MIXED `DEFENSE_1` was Dots3-Note Preview
 
 `dots-studio/dots-3-note-preview:free` was selected only after live `/api/v1/models` verification:
 
@@ -170,7 +170,26 @@ Lightning was therefore removed from the primary MIXED assignment and recorded a
 - catalog listed both `response_format` and `structured_outputs` → configured `JSON_SCHEMA`;
 - not marked agentic-harness-only.
 
-The OpenRouter catalog and model page schedule this free endpoint to go away on **2026-09-30**. That is acceptable for the current course MVP and final E2E. It is not a durable long-term production model and must be revisited after that date.
+The OpenRouter catalog and model page scheduled that free endpoint to go away on **2026-09-30**. It is no longer the primary mixed defense ID.
+
+### Later deployed MIXED `DEFENSE_1` failure (Dots3)
+
+A later deployed Case used `dots-studio/dots-3-note-preview:free` as MIXED `DEFENSE_1` and failed with HTTP 400. Combined with the 2026-09-30 expiration, Dots3 was removed from the primary MIXED assignment and was **not** added to standby.
+
+`SAME_MODEL` (`minimax/minimax-m3:free`) remains a complete successful deployed 7-agent Run and was not changed.
+
+### Why MIXED `DEFENSE_1` is Liquid LFM2.5-2.6B
+
+`liquid/lfm-2.5-2.6b:free` was selected only after live `/api/v1/models` verification on 2026-08-29:
+
+- exact ID present;
+- `pricing.prompt = 0` and `pricing.completion = 0`;
+- 64K context (65,536 tokens), sufficient for current Advocate-stage Tribunal prompts;
+- catalog listed both `response_format` and `structured_outputs` → configured `JSON_SCHEMA`;
+- no catalog `expiration_date`;
+- not marked agentic-harness-only.
+
+OpenRouter’s model page states that prompts and outputs may be retained and used to train Liquid models. This remains a course/MVP configuration, not a privacy-sensitive production recommendation.
 
 This is an explicit versioned configuration change before a fresh Case. It is not runtime fallback.
 
@@ -246,11 +265,18 @@ Free endpoints can differ from paid endpoints — and from each other — in log
 - This model set is appropriate for the current course/demo configuration.
 - It must not be interpreted as a privacy guarantee for sensitive production data.
 - The free NVIDIA Nemotron endpoint is not appropriate for confidential production data.
+- The free Liquid LFM2.5-2.6B endpoint states that prompts and outputs may be retained and used to train Liquid models. It is a course/MVP choice, not a privacy-sensitive production recommendation.
 - Provider data policies must be reviewed before production or privacy-sensitive use.
 
 This document does not resolve the project’s broader retention/privacy decision for persisted charge-sheet text.
 
 ## Research snapshot
+
+**Research snapshot: 2026-08-29 (MIXED `DEFENSE_1` revised to Liquid LFM2.5-2.6B after Dots3 HTTP 400)**
+
+- `SAME_MODEL` `minimax/minimax-m3:free` remains a complete successful deployed 7-agent Run and was not changed.
+- MIXED `DEFENSE_1` `dots-studio/dots-3-note-preview:free` failed in a later deployed Case with HTTP 400. The free endpoint was also scheduled to expire 2026-09-30. Removed from primary use; not added to standby.
+- `liquid/lfm-2.5-2.6b:free` was present in the live catalog with `pricing.prompt = 0`, `pricing.completion = 0`, `response_format`, `structured_outputs`, 64K context (65,536), and no `expiration_date`. Configured `JSON_SCHEMA`. Course/MVP only: prompts/outputs may be retained to train Liquid models.
 
 **Research snapshot: 2026-08-27 (MIXED `DEFENSE_1` revised to Dots3 after second deployed E2E)**
 

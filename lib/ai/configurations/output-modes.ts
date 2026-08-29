@@ -23,7 +23,7 @@ export type ModelOutputMode =
 
 export const MODEL_OUTPUT_MODES = {
   "z-ai/glm-5.2:free": ModelOutputMode.JSON_SCHEMA,
-  "dots-studio/dots-3-note-preview:free": ModelOutputMode.JSON_SCHEMA,
+  "liquid/lfm-2.5-2.6b:free": ModelOutputMode.JSON_SCHEMA,
   "nvidia/nemotron-3-super-120b-a12b:free": ModelOutputMode.JSON_SCHEMA,
   "minimax/minimax-m2.7:free": ModelOutputMode.JSON_OBJECT,
   "google/gemma-4-31b-it:free": ModelOutputMode.JSON_OBJECT,

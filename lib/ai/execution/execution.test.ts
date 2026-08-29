@@ -432,7 +432,7 @@ describe("executeRepresentativeAttempt", () => {
         },
       },
     );
-    assert.equal(captured?.model, "dots-studio/dots-3-note-preview:free");
+    assert.equal(captured?.model, "liquid/lfm-2.5-2.6b:free");
     assert.equal(captured?.output.mode, ModelOutputMode.JSON_SCHEMA);
     assert.equal(result.record.status, ModelCallStatus.FAILED);
     assert.equal(result.record.errorType, AttemptErrorType.MALFORMED_JSON);
@@ -455,7 +455,7 @@ describe("outputStrategyForModel", () => {
       mode: "JSON_OBJECT",
     });
     assert.deepEqual(
-      outputStrategyForModel("dots-studio/dots-3-note-preview:free", schema),
+      outputStrategyForModel("liquid/lfm-2.5-2.6b:free", schema),
       { mode: "JSON_SCHEMA", jsonSchema: schema },
     );
     assert.deepEqual(
