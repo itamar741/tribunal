@@ -10,7 +10,7 @@ Observable behavior for the product. Implementation details belong in architectu
 
 ## 2. Testable success criteria
 
-When the MVP is complete, the following must be observable:
+The MVP is complete. The following criteria were observed in automated tests and the accepted production dual-run E2E:
 
 1. The application presents a path to submit a charge sheet file as the only user-provided input.
 2. Only Markdown `.md` charge sheets are accepted (case-insensitive extension); other formats are rejected visibly.

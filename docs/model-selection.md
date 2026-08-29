@@ -4,6 +4,8 @@ This is the canonical rationale for the version-controlled OpenRouter model assi
 
 The current selection is **no longer all-free**. SAME_MODEL and four MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1`, `JUDGE_1`, and `JUDGE_3` are explicitly paid IDs. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
 
+The accepted production dual-run E2E used this configuration. Both Runs succeeded and persisted `NOT_JUSTIFIED`. Paid MIXED seats exist for reliability, not because the Tribunal requires paid inference. Availability and listed prices remain operational configuration and must be revalidated against `GET /api/v1/models` before a later change.
+
 ## Purpose
 
 The project compares two Tribunal Runs that share one procedure and differ only by model assignment:
@@ -368,6 +370,14 @@ Free endpoints can differ from paid endpoints — and from each other — in log
 This document does not resolve the project’s broader retention/privacy decision for persisted charge-sheet text.
 
 ## Research snapshot
+
+**Research snapshot: 2026-08-29 (accepted production dual-run E2E)**
+
+- A fresh T-001 Case executed on the deployed Render + Supabase + OpenRouter topology.
+- `SAME_MODEL` (`minimax/minimax-m3:free` for all seven roles) succeeded with persisted `NOT_JUSTIFIED`. One Judge retried after an upstream 429.
+- `MIXED_MODELS` succeeded with persisted `NOT_JUSTIFIED` using the current paid/free assignment, including `openai/gpt-4.1-mini`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`.
+- Reload reconstructed both Runs from persistence with no additional model calls.
+- Provider-reported MIXED cost was `$0.012415312`. Case totals remained incomplete because a failed SAME_MODEL attempt returned no usage.
 
 **Research snapshot: 2026-08-29 (MIXED `JUDGE_1` and `JUDGE_3` revised to paid endpoints after deployed 429s)**
 

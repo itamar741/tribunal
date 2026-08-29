@@ -2,7 +2,11 @@
 
 ## Purpose
 
-This plan describes the dependency-ordered path from the repository’s current state to the completed MVP. It is a planning artifact and does not authorize implementation by itself.
+This plan recorded the dependency-ordered path to the completed MVP. All twelve phases are complete. It remains a historical planning artifact and does not authorize new implementation by itself.
+
+## MVP status
+
+**Complete.** Production is live on Render (GitHub `main` auto-deploy, Supabase transaction-pooler PostgreSQL, OpenRouter). The accepted production dual-run E2E succeeded: both `SAME_MODEL` and `MIXED_MODELS` persisted `NOT_JUSTIFIED`, `/cases/{id}` reload reconstructed those results without new model calls, and duplicate execution is prevented. Accounting and audit behavior were verified, including incomplete Case totals when a failed attempt returns no usage. Provider failures and retries remain explicit and fail closed.
 
 ## Current repository state
 
@@ -40,13 +44,9 @@ Completed and verified:
 - Persisted results read model under `lib/results`: reconstructs Case metadata, both Runs, validated Advocate/Judge outputs, attempt history, and agent/stage/run/Case token-cost totals from `model_calls`. Each total is a known subtotal plus per-metric completeness. Duplicate successes and inconsistent `SUCCEEDED` Runs fail closed. Does not execute models or replace a persisted `final_verdict`.
 - HTTP execution and results routes: `POST /api/cases/[id]/execute` triggers `executeCaseTribunals` from the persisted charge sheet; `GET /api/cases/[id]/results` returns `getCaseResults`. Upload and Case metadata GET keep their existing contracts.
 - Reviewer UI: upload a `.md` charge sheet, start the Tribunal, wait for the synchronous execute request, then display persisted SAME_MODEL and MIXED_MODELS results. A Case is recoverable at `/cases/[id]` via `GET` results only.
-- Deployment preflight and production host: the app is deployed as a Render Free Web Service (`npm run start`) with GitHub `main` auto-deploy, Supabase transaction-pooler PostgreSQL, and OpenRouter. The first dual-run E2E completed at the system level with both Runs failing in the Advocate stage because of free-model/provider availability. Canonical notes: `docs/deployment.md`.
+- Deployment and production host: the app is deployed as a Render Free Web Service (`npm run start`) with GitHub `main` auto-deploy, Supabase transaction-pooler PostgreSQL, and OpenRouter. The accepted production dual-run E2E succeeded. Canonical notes: `docs/deployment.md`.
 
-Not implemented:
-
-- Past-Case listing, and a second live dual-run E2E after the MIXED_MODELS revision.
-
-## Recommended phase sequence
+## Recommended phase sequence (complete)
 
 1. Persist and retrieve a unique Case for every accepted upload.
 2. Add two durable Tribunal Run records and lifecycle state per Case.
@@ -389,9 +389,11 @@ Completed: upload → start Tribunal → wait for the synchronous execute reques
 
 ## Deployment preflight
 
-Completed: production is a Render Free Web Service with auto-deploy from `main`. Synchronous `POST /api/cases/[id]/execute` remains. The first dual-run E2E completed at the system level; both Runs failed closed in the Advocate stage. MIXED `DEFENSE_1` and `PROSECUTION_1` were then revised. A second fresh-Case live E2E is still pending. See `docs/deployment.md` and `docs/model-selection.md`.
+Completed: production is a Render Free Web Service with auto-deploy from `main`. Synchronous `POST /api/cases/[id]/execute` remains. The accepted production dual-run E2E succeeded. See `docs/deployment.md` and `docs/model-selection.md`.
 
 ## Phase 7 — Dual-run coordination, retries, durable results, and Case totals
+
+Completed.
 
 ### Goal
 
@@ -436,6 +438,8 @@ Phase 6 and the settled retry/attempt policy in `docs/architecture.md`.
 
 ## Phase 8 — Execution trigger and result-query API
 
+Completed.
+
 ### Goal
 
 Connect Case creation to reliable Tribunal execution and expose server-authoritative status/results by Case ID.
@@ -475,6 +479,8 @@ Next.js server routes/modules, Case execution service, status/result DTOs, and r
 Phase 7. Concrete host limits are measured here rather than assumed beforehand.
 
 ## Phase 9 — Two-run results UI
+
+Completed.
 
 ### Goal
 
@@ -518,6 +524,8 @@ Phase 8 and the designed response contracts.
 
 ## Phase 10 — Durable past-Case retrieval
 
+Completed for retrieval by known Case ID. A browsable Case list remains post-MVP.
+
 ### Goal
 
 Ensure a persisted Case and its results can be reopened by unique Case ID without rerunning the Tribunal.
@@ -553,6 +561,8 @@ Case query repository, Next.js Case detail route/page, and optionally a minimal 
 Phase 9. Retrieval by known Case ID is settled. Browsable listing, authentication, and list metadata are internal product decisions.
 
 ## Phase 11 — Deployment and operational configuration
+
+Completed.
 
 ### Goal
 
@@ -595,6 +605,8 @@ Provider accounts/credentials, concrete deployment topology, data privacy/access
 
 ## Phase 12 — Final MVP verification
 
+Completed. The production dual-run E2E on Render succeeded.
+
 ### Goal
 
 Prove all settled MVP behavior end-to-end without adding features.
@@ -628,33 +640,9 @@ The MVP Completion Gate below passes in a production-like environment, along wit
 
 Phases 1–11, runtime contract implementation, encoded instructor profiles, and provider credentials.
 
-## Open Decisions
-
-Internal design still required:
-
-- Past-Case public-list/authentication/access policy and safe list metadata; retrieval by known unique ID is settled
-- Retention/privacy rules for persisted validated Markdown text
-
-Settled:
-
-- Advocate and judge response-contract logical shapes (`docs/architecture.md`)
-- Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`, Phase 3C)
-- Zod runtime validators under `lib/ai/contracts/` (Phase 3A)
-- Retry/failure policy (`docs/architecture.md`; single-representative runtime retry is implemented)
-- Concrete deployment topology (`docs/deployment.md`: Render Free Web Service + Supabase + OpenRouter). Vercel Pro remains a documented alternative.
-- Concrete OpenRouter model assignment (`lib/ai/configurations/`, Phase 3D; rationale in `docs/model-selection.md`)
-
-Waiting on an explicit recorded contract:
-
-- Exact Markdown charge-sheet structural contract (T-001 is the canonical example fixture; it is not a generic grammar)
-
-## Instructor Dependencies
-
-- The exact Markdown charge-sheet structural contract, recorded before structural parsing is implemented. Profile acquisition is complete.
-
 ## MVP Completion Gate
 
-The MVP is complete only when all of the following work end-to-end:
+Passed. The following worked end-to-end in automated tests and the accepted production E2E:
 
 - A valid `.md` upload creates a new durable Case with a unique ID and stored original file name; identical content creates another Case; invalid uploads create none; original files/blobs are not stored.
 - A persisted Case can be retrieved by unique Case ID without rerunning model calls.
@@ -671,6 +659,21 @@ The MVP is complete only when all of the following work end-to-end:
 - The simplest Next.js-compatible execution mechanism is used unless measured deployment limits justify additional job/background infrastructure.
 - Production migration, recovery, security-boundary, test, lint, typecheck, and build checks pass.
 
-## Deferred / Non-MVP Work
+## Post-MVP / future work
 
-Authentication unless required by the final access model, admin panels, editable profiles/prompts, client model selectors, multi-round debates, PDF/DOCX/TXT/image/OCR input, inventing an unrecorded charge-sheet structure, a human-recorded final verdict or approval decision, public global Case listing without an approved access model, analytics dashboards, full-text history search, exports, and scaling infrastructure without measured need.
+Intentionally not implemented. Do not treat these as unfinished MVP phases:
+
+- Authentication and access control
+- Browsable Case listing/search
+- Asynchronous or background execution if deployment requirements change
+- Privacy/retention policy hardening for persisted charge-sheet text
+- Replacing volatile or free model endpoints after future catalog/availability changes
+- Richer observability
+- Manual rerun or versioned re-execution of an existing Tribunal Run
+- Admin panels, editable profiles/prompts, and client model selectors
+- Multi-round debates
+- PDF/DOCX/TXT/image/OCR input
+- A recorded generic Markdown charge-sheet structural grammar
+- A human-recorded final verdict or approval decision
+- Analytics dashboards, full-text history search, and exports
+- Scaling infrastructure without measured need

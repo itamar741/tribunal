@@ -4,6 +4,8 @@
 
 AI Tribunal is a **Next.js modular monolith**: the browser UI and server authority live in one Next.js project. There is no separate backend service in the MVP.
 
+The MVP is implemented and deployed on Render. The accepted production dual-run E2E succeeded: both Tribunal Runs persisted `NOT_JUSTIFIED`, `/cases/{id}` reload reconstructed those results without new model calls, and duplicate execution is prevented. See [`docs/deployment.md`](deployment.md).
+
 ```text
 Browser (UI)
     │  charge sheet upload only
@@ -52,7 +54,7 @@ Validated charge-sheet text
       ↓
 Create Case + two Tribunal Runs (lib/cases) → PostgreSQL
       ↓
-Future application pipeline (AI execution, …)
+Tribunal execution (lib/tribunal) + Model Call audit
 ```
 
 - The route handler owns upload transport only.
@@ -539,7 +541,7 @@ lib/
   charge-sheet/      # Validate/read .md → validated text (no MD parse)
   cases/             # Create/retrieve Case records and their two Tribunal Runs
   model-calls/       # Persist/retrieve individual AI attempt audit rows
-  tribunal/          # Reusable Tribunal engine (later)
+  tribunal/          # Reusable Tribunal engine
   ai/
     profiles/        # Instructor hard-coded profiles
     contracts/       # Central advocate/judge response contracts
@@ -552,22 +554,24 @@ docs/                # Framing, architecture, specification
 docs/reference/      # Instructor source dossier (provenance only)
 ```
 
-## Unresolved decisions
+## Post-MVP / future work
 
-Internal design still required:
+The following are intentionally out of the completed MVP:
 
-- Past-case listing/authentication/access policy beyond retrieval by known Case ID
-- Retention/privacy rules for persisted validated Markdown text
+- Authentication and access control
+- Browsable Case listing/search
+- Asynchronous or background execution if host limits later require it
+- Privacy/retention policy hardening for persisted charge-sheet text
+- Replacing volatile or free model endpoints (catalog revalidation remains operational work)
+- Richer observability
+- Manual rerun or versioned re-execution of an existing Tribunal Run
+- A recorded generic Markdown charge-sheet structural grammar (T-001 remains the canonical example, not a parser contract)
 
-Settled:
+Settled for the MVP:
 
-- Advocate and judge response-contract logical shapes (`docs/architecture.md`)
+- Advocate and judge response-contract logical shapes
 - Runtime prompt layer composition and provider-agnostic builders (`lib/ai/prompts/`)
-- Zod as the runtime validation library under `lib/ai/contracts/` (trimmed non-empty strings; extra fields forbidden)
-- Retry/failure policy (this document; single-representative runtime retry is implemented under `lib/ai/execution/`)
-- Concrete OpenRouter model assignment for `SAME_MODEL` and `MIXED_MODELS`, plus a non-automatic standby pool (`lib/ai/configurations/`; rationale in [`docs/model-selection.md`](model-selection.md))
-- Concrete deployment topology for the MVP ([`docs/deployment.md`](deployment.md): Render Free Web Service + Supabase transaction pooler + OpenRouter). Vercel Pro remains a documented alternative.
-
-Waiting on an explicit recorded contract:
-
-- Exact Markdown charge-sheet structural contract. Instructor Case T-001 is available as the canonical example fixture; that example is not by itself a generic machine-readable grammar.
+- Zod as the runtime validation library under `lib/ai/contracts/`
+- Retry/failure policy (this document)
+- Concrete OpenRouter model assignment (`lib/ai/configurations/`; rationale in [`docs/model-selection.md`](model-selection.md))
+- Concrete deployment topology ([`docs/deployment.md`](deployment.md): Render Free Web Service + Supabase transaction pooler + OpenRouter)

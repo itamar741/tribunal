@@ -2,6 +2,8 @@
 
 Next.js modular monolith for dual AI Tribunal analysis of an uploaded charge sheet.
 
+The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Supabase PostgreSQL, OpenRouter). The accepted production dual-run E2E succeeded: both `SAME_MODEL` and `MIXED_MODELS` persisted `NOT_JUSTIFIED`, results survived reload without rerunning models, and duplicate execution is prevented.
+
 ## Docs
 
 - [Project framing](docs/project-framing.md)
@@ -44,4 +46,4 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scope note
 
-Charge-sheet upload validation, Case persistence, Tribunal Run lifecycle persistence, Model Call audit persistence, runtime response-contract validators, the canonical T-001 charge-sheet fixture, instructor agent profiles, provider-agnostic runtime prompt builders, version-controlled OpenRouter model assignment, a one-agent audited OpenRouter slice, bounded two-attempt representative retry, the four-advocate parallel stage, the three-judge parallel stage with two-of-three majority, single-run orchestration (`executeTribunalRun`), Case-level dual-run orchestration (`executeCaseTribunals`), persisted results/accounting (`getCaseResults`), HTTP execute/results routes, and the reviewer UI (upload → execute → persisted results, plus retrieval by Case ID) are implemented. Production is a Render Free Web Service with auto-deploy from `main`; see [docs/deployment.md](docs/deployment.md). Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).
+MVP implementation is complete: charge-sheet upload, Case and Tribunal Run persistence, Model Call audit, Zod contracts, instructor profiles, runtime prompts, version-controlled OpenRouter assignment, bounded retry, the reusable Tribunal engine, persisted results/accounting, HTTP execute/results routes, and the reviewer UI. Production is a Render Free Web Service with auto-deploy from `main`. See [docs/deployment.md](docs/deployment.md) and [docs/implementation-plan.md](docs/implementation-plan.md). Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).

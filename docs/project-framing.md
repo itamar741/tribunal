@@ -16,7 +16,7 @@ A human reviewer who uploads exactly one charge sheet file and later reviews the
 
 ## Definition of done
 
-For the overall MVP (across phases), done means:
+The MVP is complete. For the overall MVP (across phases), done means:
 
 - A reviewer can upload a Markdown (`.md`) charge sheet file as the sole user input.
 - Every successful upload creates a new Case with a unique ID and stores the original file name; identical uploads create separate Cases and there is no MVP deduplication.

@@ -6,7 +6,7 @@ Durable decisions for hosting the current synchronous MVP. This document does no
 
 **Next.js Web Service on Render Free + existing Supabase transaction-pooler PostgreSQL + OpenRouter.**
 
-This is the actual production topology. GitHub `main` is connected with auto-deploy. Do not create another Render service.
+This is the actual production topology. GitHub `main` is connected with auto-deploy. Do not create another Render service. The accepted production dual-run E2E ran on this topology and succeeded.
 
 Render Free constraints that matter for this MVP:
 
@@ -108,27 +108,27 @@ The application is already deployed on Render Free with auto-deploy from `main`.
 3. Push `main`. Wait for the Render deploy to finish before starting a new Case.
 4. Smoke-check `/` if needed. A new dual-run Case is a separate, once-only live E2E.
 
-## Final live E2E (once)
+## Production E2E (completed)
 
-Perform this sequence **once** after deploy. It may consume 14–28 model requests, including paid MIXED seats. Do not repeat it for curiosity.
+The Tribunal MVP completed a successful deployed dual-run E2E on this topology: GitHub `main`, Render Free Web Service, Supabase PostgreSQL transaction pooler, and OpenRouter.
 
-1. Verify production `schema_migrations` contains every file under `supabase/migrations/`.
-2. Open deployed `/`.
-3. Upload `fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`.
-4. Confirm a new Case ID and two `PENDING` Runs (upload response and/or Case workspace).
-5. Click **Start Tribunal** exactly once. Do not refresh during the wait.
-6. Allow both `SAME_MODEL` and `MIXED_MODELS` to finish the synchronous POST.
-7. Confirm the UI then loads `GET /api/cases/{id}/results` (not the execute JSON) as the display source.
-8. Reload `/cases/{id}` and confirm no second execute request.
-9. Confirm the two Run panels are independent (one may fail while the other remains fully visible).
-10. Confirm four Advocates in order (Jon Snow, Tyrion Lannister, Daenerys Targaryen, Grey Worm) with summary / three arguments / conclusion, or a clear unavailable state.
-11. Confirm three Judges (Aaron Barak, Menachem Elon, Meir Shamgar) with verdict / summary / three reasons, or a clear unavailable state.
-12. For each `SUCCEEDED` Run, confirm the persisted `finalVerdict` (`JUSTIFIED` / `NOT_JUSTIFIED`) is shown and was not recomputed in the browser.
-13. If a provider fails, confirm that Run is explicitly `FAILED` with no invented verdict.
-14. Confirm Model Call attempt counts (7 per successful Run; up to 14 with retries; independent per Run).
-15. Confirm token/cost accounting and that incomplete totals are labeled incomplete.
-16. Attempt execute again for the same Case; confirm `NOT_PENDING` / no additional model requests.
-17. Confirm browser/network payloads contain no API key, prompts, profile text, or charge-sheet body.
-18. Reload again and confirm the same persisted rows in production PostgreSQL.
+A fresh Case was created from `fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md` and executed once through the deployed application.
 
-If the host returns a duration timeout (504) before the POST completes, treat that as a measured hosting failure: inspect persisted Run state, do not click Start again, and do not introduce queues until that measurement is recorded.
+| Run | Status | Final verdict |
+| --- | --- | --- |
+| `SAME_MODEL` | `SUCCEEDED` | `NOT_JUSTIFIED` |
+| `MIXED_MODELS` | `SUCCEEDED` | `NOT_JUSTIFIED` |
+
+`SAME_MODEL` used `minimax/minimax-m3:free` for all seven roles. All four Advocates and all three Judges completed. One Judge required a retry after an upstream 429. The majority persisted as `NOT_JUSTIFIED`.
+
+`MIXED_MODELS` used the current paid/free assignment (`openai/gpt-4.1-mini`, `minimax/minimax-m2.7:free`, `poolside/laguna-s-2.1:free`, `minimax/minimax-m3:free`, `openai/gpt-4.1`, `nvidia/nemotron-3-super-120b-a12b:free`, `meta-llama/llama-4-maverick`). All four Advocates eventually succeeded (`PROSECUTION_1` retried after malformed JSON). All three Judges succeeded. The majority persisted as `NOT_JUSTIFIED`.
+
+Persisted MIXED accounting: 8 attempts; 19,426 input / 9,088 output / 28,514 total tokens; provider-reported cost `$0.012415312`; duration 162,798 ms. Paid Model Call costs were GPT-4.1 Mini `$0.0007884`, GPT-4.1 `$0.010658`, and Llama 4 Maverick `$0.000968912`. Free endpoints reported `$0`.
+
+Persisted Case totals: 16 attempts; known 39,600 input / 13,365 output / 52,965 total tokens; known cost `$0.012415312`; known duration 234,936 ms. Case-level accounting remained marked incomplete because at least one failed SAME_MODEL attempt returned no usage/cost. Unknown accounting is not converted to zero.
+
+Reload of deployed `/cases/{id}` reconstructed both `SUCCEEDED` / `NOT_JUSTIFIED` Runs from persistence. No model execution and no additional Model Call rows.
+
+The UI does not expose **Start Tribunal** once the Case is no longer `PENDING`. Server-side duplicate protection is verified in automated tests: atomic `PENDING → RUNNING` claim, no re-claim of `RUNNING` / `SUCCEEDED` / `FAILED`, concurrent callers execute each durable Run at most once, and rejected duplicates create zero new Model Call rows. A second live execute was not repeated for this evidence.
+
+Do not repeat this live E2E for curiosity. If a later host returns a duration timeout (504) before POST completes, inspect persisted Run state, do not click Start again, and do not introduce queues until that measurement is recorded.
