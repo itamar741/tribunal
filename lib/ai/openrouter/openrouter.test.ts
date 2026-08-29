@@ -435,6 +435,7 @@ describe("completeChat", () => {
     assert.equal(result.usage.totalTokens, 10);
     assert.equal(result.usage.totalCost, "0");
     assert.doesNotMatch(result.errorMessage, /must not be used/);
+    assert.equal("content" in result ? result.content : null, null);
   });
 
   it("classifies a top-level error inside HTTP 2xx as a provider response failure", async () => {

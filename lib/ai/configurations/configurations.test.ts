@@ -118,7 +118,7 @@ describe("MIXED_MODELS assignment", () => {
     assert.equal(modelIds.length, 7);
     assert.equal(new Set(modelIds).size, 7);
     assert.deepEqual(MIXED_MODELS_BY_ROLE, {
-      [TribunalAgentRole.DEFENSE_1]: "openai/gpt-oss-120b",
+      [TribunalAgentRole.DEFENSE_1]: "openai/gpt-4.1-mini",
       [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
       [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
@@ -138,13 +138,18 @@ describe("MIXED_MODELS assignment", () => {
 
 describe("model-selection constraints", () => {
   it("allows only the documented paid primary ID", () => {
-    assert.deepEqual(EXPLICITLY_PAID_MODEL_IDS, ["openai/gpt-oss-120b"]);
-    assert.equal(isExplicitlyPaidModelId("openai/gpt-oss-120b"), true);
+    assert.deepEqual(EXPLICITLY_PAID_MODEL_IDS, ["openai/gpt-4.1-mini"]);
+    assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1-mini"), true);
+    assert.equal(isExplicitlyPaidModelId("openai/gpt-oss-120b"), false);
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
-      "openai/gpt-oss-120b",
+      "openai/gpt-4.1-mini",
     );
-    assert.equal(PRIMARY_MODEL_IDS.includes("openai/gpt-oss-120b"), true);
+    assert.equal(PRIMARY_MODEL_IDS.includes("openai/gpt-4.1-mini"), true);
+    assert.equal(
+      (PRIMARY_MODEL_IDS as readonly string[]).includes("openai/gpt-oss-120b"),
+      false,
+    );
 
     const expectedFree = [
       ...PRIMARY_MODEL_IDS,
@@ -195,7 +200,17 @@ describe("model-selection constraints", () => {
     );
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
-      "openai/gpt-oss-120b",
+      "openai/gpt-4.1-mini",
+    );
+    assert.equal(
+      (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
+        "openai/gpt-oss-120b",
+      ),
+      false,
+    );
+    assert.equal(
+      STANDBY_MODEL_IDS.includes("openai/gpt-oss-120b"),
+      false,
     );
     assert.equal(
       (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
@@ -346,7 +361,7 @@ describe("model output modes", () => {
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
-      getOutputModeForModel("openai/gpt-oss-120b"),
+      getOutputModeForModel("openai/gpt-4.1-mini"),
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(

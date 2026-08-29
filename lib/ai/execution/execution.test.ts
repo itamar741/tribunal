@@ -432,7 +432,7 @@ describe("executeRepresentativeAttempt", () => {
         },
       },
     );
-    assert.equal(captured?.model, "openai/gpt-oss-120b");
+    assert.equal(captured?.model, "openai/gpt-4.1-mini");
     assert.equal(captured?.output.mode, ModelOutputMode.JSON_SCHEMA);
     assert.equal(result.record.status, ModelCallStatus.FAILED);
     assert.equal(result.record.errorType, AttemptErrorType.MALFORMED_JSON);
@@ -455,7 +455,7 @@ describe("outputStrategyForModel", () => {
       mode: "JSON_OBJECT",
     });
     assert.deepEqual(
-      outputStrategyForModel("openai/gpt-oss-120b", schema),
+      outputStrategyForModel("openai/gpt-4.1-mini", schema),
       { mode: "JSON_SCHEMA", jsonSchema: schema },
     );
     assert.deepEqual(

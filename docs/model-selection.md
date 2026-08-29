@@ -28,7 +28,7 @@ The current IDs below were revalidated against the live `/api/v1/models` catalog
 ## Selection constraints
 
 - **OpenRouter is the AI gateway.** All model calls go through OpenRouter.
-- **Model configuration may contain paid endpoints.** Concrete IDs, output capabilities, and current pricing must be explicitly documented and catalog-verified. Free-configured IDs must still list zero prompt and completion prices. The one current paid primary is `openai/gpt-oss-120b`.
+- **Model configuration may contain paid endpoints.** Concrete IDs, output capabilities, and current pricing must be explicitly documented and catalog-verified. Free-configured IDs must still list zero prompt and completion prices. The one current paid primary is `openai/gpt-4.1-mini`.
 - **Concrete model IDs are required** for reproducibility and audit. Each configured seat must name a specific OpenRouter model identity.
 - **`openrouter/free` is inappropriate.** That router may choose different models dynamically. A Tribunal Run cannot treat a randomly selected model as a stable experimental condition.
 - **Adequate context length is required.** A run later sends the charge sheet, role/profile instructions, the response contract, and — for judges — four validated advocate outputs. The selected windows are larger than those current Tribunal inputs.
@@ -108,7 +108,7 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 
 | Tribunal role | Concrete model ID | Provider / family | Free | Context size | Structured-output level | Selection rationale / tradeoff |
 | --- | --- | --- | --- | --- | --- | --- |
-| `DEFENSE_1` | `openai/gpt-oss-120b` | OpenAI gpt-oss-120b | paid | 128K (131,072) | `JSON_SCHEMA` | Replaces Liquid after two deployed completions with null assistant content. Live catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
+| `DEFENSE_1` | `openai/gpt-4.1-mini` | OpenAI GPT-4.1 Mini | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces paid GPT-OSS after two deployed completions with null assistant content and mandatory reasoning. Conventional text output; catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 | `DEFENSE_2` | `minimax/minimax-m2.7:free` | MiniMax M2.7 | `:free` | 192K (196,608) | `JSON_OBJECT` | Different MiniMax generation from M3. Tradeoff: smaller window than M3; structure is JSON mode, not JSON Schema. |
 | `PROSECUTION_1` | `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 | `:free` | 256K (262,144) | `PROMPT_ONLY` | Promoted from standby after Gemma 4 31B returned provider 429s on both allowed attempts. Tradeoff: no `response_format`; JSON parse + Zod required. |
 | `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
@@ -199,7 +199,7 @@ A later deployed Case used `liquid/lfm-2.5-2.6b:free` as MIXED `DEFENSE_1`. Both
 
 `SAME_MODEL` (`minimax/minimax-m3:free`) remains a complete successful deployed 7-agent Run and was not changed.
 
-### Why MIXED `DEFENSE_1` is paid GPT-OSS 120B
+### Why MIXED `DEFENSE_1` was paid GPT-OSS 120B
 
 `openai/gpt-oss-120b` was selected only after live `/api/v1/models` verification on 2026-08-29 and a sanitized OpenRouter key/credits diagnostic that confirmed paid credit is available:
 
@@ -211,6 +211,28 @@ A later deployed Case used `liquid/lfm-2.5-2.6b:free` as MIXED `DEFENSE_1`. Both
 - ordinary API access, not harness-only.
 
 This seat is paid because the remaining MIXED Advocate-stage failure was isolated to a free endpoint that returned null assistant content. GPT-OSS 120B offers JSON Schema support and substantially more robust provider routing than the failed free defense candidates (Inkling 403, Lightning timeout + malformed JSON, Dots3 HTTP 400, Liquid null content). Provider-reported usage/cost remains audited; execution does not calculate the charge.
+
+This is an explicit versioned configuration revision before a fresh Case. It is not runtime fallback.
+
+### Later deployed MIXED `DEFENSE_1` failure (paid GPT-OSS)
+
+A later deployed Case used `openai/gpt-oss-120b` as MIXED `DEFENSE_1`. Both allowed attempts returned a normal OpenRouter completion envelope with no provider error, `message.content = null`, and `reasoning` present. The live catalog marks this ID as mandatory-reasoning. The Tribunal response boundary remains assistant content → JSON parse → Zod. The parser was not changed to consume `message.reasoning`. GPT-OSS is therefore unsuitable for this seat and was removed from the primary MIXED assignment. It was not added to standby.
+
+`SAME_MODEL` (`minimax/minimax-m3:free`) remains a complete successful deployed 7-agent Run and was not changed.
+
+### Why MIXED `DEFENSE_1` is paid GPT-4.1 Mini
+
+`openai/gpt-4.1-mini` was selected only after live `/api/v1/models` verification on 2026-08-29:
+
+- exact ID present;
+- listed `pricing.prompt = 0.0000004` and `pricing.completion = 0.0000016`;
+- ~1M context (1,047,576 tokens);
+- catalog listed both `response_format` and `structured_outputs` → configured `JSON_SCHEMA`;
+- catalog listed no `reasoning`, `include_reasoning`, or `reasoning_effort` parameters and no reasoning object;
+- output modality is text;
+- not marked agentic-harness-only.
+
+GPT-4.1 Mini is a conventional text-output model with JSON Schema support and high current availability. It was chosen after two free/paid reasoning-style endpoints (Liquid and GPT-OSS) returned null assistant content. Provider-reported usage/cost remains audited; execution does not calculate the charge.
 
 This is an explicit versioned configuration revision before a fresh Case. It is not runtime fallback.
 
@@ -273,7 +295,7 @@ Later execution must record the actual model identity returned by OpenRouter so 
 ## Cost rationale
 
 - SAME_MODEL, the other six MIXED seats, and the standby pool remain `:free` IDs and must still list zero prompt/completion prices in the live catalog.
-- MIXED `DEFENSE_1` is the paid ID `openai/gpt-oss-120b`. On 2026-08-29 the catalog listed `pricing.prompt = 0.000000037` and `pricing.completion = 0.00000017`.
+- MIXED `DEFENSE_1` is the paid ID `openai/gpt-4.1-mini`. On 2026-08-29 the catalog listed `pricing.prompt = 0.0000004` and `pricing.completion = 0.0000016`.
 - Provider-reported usage and cost for that Model Call are persisted as returned. Execution does not calculate the charge.
 - Free requests remain subject to OpenRouter limits and availability. Capacity, latency, rate limits, and listed prices can change without notice.
 - Zero price on free-configured IDs is a current operational property, not a permanent product guarantee.
@@ -293,6 +315,12 @@ Free endpoints can differ from paid endpoints — and from each other — in log
 This document does not resolve the project’s broader retention/privacy decision for persisted charge-sheet text.
 
 ## Research snapshot
+
+**Research snapshot: 2026-08-29 (MIXED `DEFENSE_1` revised to paid `openai/gpt-4.1-mini` after GPT-OSS null content)**
+
+- `SAME_MODEL` `minimax/minimax-m3:free` remains a complete successful deployed 7-agent Run and was not changed.
+- MIXED `DEFENSE_1` `openai/gpt-oss-120b` failed in a later deployed Case: both allowed attempts returned a normal completion envelope with `message.content = null` and reasoning present. The live catalog marks GPT-OSS as mandatory-reasoning. The parser was not changed to consume reasoning. Removed from primary use; not added to standby.
+- `openai/gpt-4.1-mini` was present with non-zero `pricing.prompt = 0.0000004`, `pricing.completion = 0.0000016`, `response_format`, `structured_outputs`, ~1M context (1,047,576), text output, and no catalog reasoning parameters. Configured `JSON_SCHEMA`.
 
 **Research snapshot: 2026-08-29 (MIXED `DEFENSE_1` revised to paid `openai/gpt-oss-120b` after Liquid null content)**
 
