@@ -4,7 +4,7 @@
  * model_calls. Does not execute models.
  */
 
-export { sumUsage } from "./accounting";
+export { sumCosts, sumUsage } from "./accounting";
 export type {
   AggregatedCost,
   AggregatedInt,
@@ -19,6 +19,17 @@ export type {
   GetCaseResultsResult,
   GetCaseResultsSuccess,
 } from "./get-case-results";
+export {
+  DEFAULT_RECENT_EXECUTED_CASE_LIMIT,
+  listRecentExecutedCases,
+} from "./list-recent-executed-cases";
+export type {
+  ListRecentExecutedCasesDeps,
+  ListRecentExecutedCasesInput,
+  ListRecentExecutedCasesSource,
+  RecentExecutedCase,
+  RecentExecutedCaseRow,
+} from "./list-recent-executed-cases";
 export type {
   CaseResults,
   ModelCallAttemptView,

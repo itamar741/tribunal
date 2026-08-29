@@ -451,6 +451,7 @@ Tribunal execution remains a modular server-side application service independent
 
 ```text
 POST /api/charge-sheet          → create Case + two PENDING Runs
+GET  /api/cases/recent          → five most recently executed Cases (read-only)
 GET  /api/cases/{id}            → Case metadata (no charge-sheet text)
 POST /api/cases/{id}/execute    → executeCaseTribunals(persisted charge sheet)
 GET  /api/cases/{id}/results    → getCaseResults (read-only)
@@ -459,6 +460,7 @@ GET  /api/cases/{id}/results    → getCaseResults (read-only)
 - `POST /api/cases/{id}/execute` uses the Case ID in the route as authority. It loads the persisted `charge_sheet_text` and `OPENROUTER_API_KEY` on the server. The client cannot supply Run IDs, model IDs, profiles, charge-sheet text, retry parameters, or verdicts.
 - HTTP **200** is used for every completed execution request: both Runs succeeded, one succeeded, or both failed. The JSON body is authoritative. `ok: true` means both Runs succeeded. `ok: false` with `reason: "RUN_FAILURE"` still includes both independent Run outcomes. Provider/model failures are not converted into an opaque 500.
 - Duplicate execute requests keep the existing per-Run `PENDING → RUNNING` claim. Already-started or terminal Runs return `NOT_PENDING` and make no additional model requests. There is no Case-level lock.
+- `GET /api/cases/recent` is a homepage convenience. It returns at most five Cases that have at least one Tribunal Run with `started_at`, ordered by `MAX(tribunal_runs.started_at) DESC`. It never executes a model or mutates Run state. Charge-sheet text, prompts, raw provider output, and secrets are omitted. Manual known-Case retrieval remains the supported reopen path.
 - `GET /api/cases/{id}/results` is read-only. It never executes a model or mutates Run state. Charge-sheet text is omitted. There is no Case-level combined verdict.
 - Invalid Case ID is 400; missing Case is 404; missing OpenRouter or database configuration is 503; invalid durable topology is 409; persisted integrity failure is 500 with `INTEGRITY_VIOLATION`. Unexpected failures return a safe 500 without secrets, stack traces, prompts, or raw provider payloads.
 - Start with this synchronous Next.js route. Do not pre-commit the MVP to a queue, job system, SSE, polling, or additional durable background infrastructure.
@@ -559,7 +561,7 @@ docs/reference/      # Instructor source dossier (provenance only)
 The following are intentionally out of the completed MVP:
 
 - Authentication and access control
-- Browsable Case listing/search
+- Browsable Case listing/search (the homepage five-item recent list is an MVP convenience, not this)
 - Asynchronous or background execution if host limits later require it
 - Privacy/retention policy hardening for persisted charge-sheet text
 - Replacing volatile or free model endpoints (catalog revalidation remains operational work)

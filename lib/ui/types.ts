@@ -112,6 +112,18 @@ export type CaseResultsResponse = {
   ok: true;
 } & CaseResultsView;
 
+export type RecentCaseView = {
+  caseId: string;
+  originalFileName: string;
+  executedAt: string;
+  totalCost: AggregatedCost;
+};
+
+export type RecentCasesResponse = {
+  ok: true;
+  cases: RecentCaseView[];
+};
+
 export type ApiErrorResponse = {
   ok: false;
   code: string;

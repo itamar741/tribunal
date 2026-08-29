@@ -74,7 +74,7 @@ function fromScaledInteger(value: bigint): string {
   return normalizeCost(rendered);
 }
 
-function sumCosts(values: readonly (string | null)[]): AggregatedCost {
+export function sumCosts(values: readonly (string | null)[]): AggregatedCost {
   if (values.length === 0) {
     return { value: "0", complete: true };
   }

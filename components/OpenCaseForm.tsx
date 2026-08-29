@@ -1,30 +1,68 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { isCaseId } from "@/lib/cases/id";
+import { formatLocalDateTime, formatUsd, shortenCaseId } from "@/lib/ui/format";
+import { getRecentCases } from "@/lib/ui/tribunal-client";
+import type { RecentCaseView } from "@/lib/ui/types";
 
-export function OpenCaseForm() {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+export type RecentCasesState =
+  | { status: "loading" }
+  | { status: "empty" }
+  | { status: "ready"; cases: RecentCaseView[] }
+  | { status: "error" };
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const input = form.elements.namedItem("caseId");
-    if (!(input instanceof HTMLInputElement)) {
-      setError("Case ID control is unavailable.");
-      return;
-    }
-    const caseId = input.value.trim();
-    if (!isCaseId(caseId)) {
-      setError("Enter a valid Case ID.");
-      return;
-    }
-    setError(null);
-    router.push(`/cases/${caseId}`);
-  }
+export function RecentCases({ state }: { state: RecentCasesState }) {
+  return (
+    <div className="mt-8 border-t border-[var(--border)] pt-6">
+      <h3 className="text-base font-medium">Recent Cases</h3>
+      {state.status === "loading" ? (
+        <p className="mt-3 text-sm text-[var(--muted)]">Loading recent Cases…</p>
+      ) : null}
+      {state.status === "empty" ? (
+        <p className="mt-3 text-sm text-[var(--muted)]">No executed Cases yet.</p>
+      ) : null}
+      {state.status === "error" ? (
+        <p role="alert" className="mt-3 text-sm text-red-800">
+          Recent Cases could not be loaded.
+        </p>
+      ) : null}
+      {state.status === "ready" ? (
+        <ul className="mt-3 divide-y divide-[var(--border)]">
+          {state.cases.map((item) => (
+            <li key={item.caseId}>
+              <Link
+                href={`/cases/${item.caseId}`}
+                className="block py-3 hover:bg-[var(--background)]"
+              >
+                <p className="text-sm font-medium">{item.originalFileName}</p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  {formatLocalDateTime(item.executedAt)}
+                </p>
+                <p className="mt-1 text-sm text-[var(--muted)]">
+                  Case {shortenCaseId(item.caseId)}…
+                </p>
+                <p className="mt-1 text-sm">{formatUsd(item.totalCost)}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 
+export function OpenCasePanel({
+  formError,
+  recent,
+  onSubmit,
+}: {
+  formError: string | null;
+  recent: RecentCasesState;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
   return (
     <section
       aria-labelledby="open-case-heading"
@@ -57,11 +95,66 @@ export function OpenCaseForm() {
           Open Case
         </button>
       </form>
-      {error ? (
+      {formError ? (
         <p role="alert" className="mt-3 text-sm text-red-800">
-          {error}
+          {formError}
         </p>
       ) : null}
+      <RecentCases state={recent} />
     </section>
+  );
+}
+
+export function OpenCaseForm() {
+  const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [recent, setRecent] = useState<RecentCasesState>({ status: "loading" });
+
+  useEffect(() => {
+    let cancelled = false;
+    getRecentCases()
+      .then((result) => {
+        if (cancelled) {
+          return;
+        }
+        if (!result.ok) {
+          setRecent({ status: "error" });
+          return;
+        }
+        if (result.body.cases.length === 0) {
+          setRecent({ status: "empty" });
+          return;
+        }
+        setRecent({ status: "ready", cases: result.body.cases });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setRecent({ status: "error" });
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const input = form.elements.namedItem("caseId");
+    if (!(input instanceof HTMLInputElement)) {
+      setError("Case ID control is unavailable.");
+      return;
+    }
+    const caseId = input.value.trim();
+    if (!isCaseId(caseId)) {
+      setError("Enter a valid Case ID.");
+      return;
+    }
+    setError(null);
+    router.push(`/cases/${caseId}`);
+  }
+
+  return (
+    <OpenCasePanel formError={error} recent={recent} onSubmit={onSubmit} />
   );
 }

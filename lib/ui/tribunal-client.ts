@@ -3,6 +3,7 @@ import type {
   CaseResultsResponse,
   ExecuteRunFailureResponse,
   ExecuteSuccessResponse,
+  RecentCasesResponse,
   UploadSuccessResponse,
 } from "./types";
 
@@ -126,4 +127,34 @@ export async function loadPersistedResultsAfterExecution(
   fetchImpl: typeof fetch = fetch,
 ): Promise<ClientResult<CaseResultsResponse>> {
   return getCaseResults(caseId, fetchImpl);
+}
+
+/**
+ * Homepage convenience list. Read-only; does not execute a Case.
+ */
+export async function getRecentCases(
+  fetchImpl: typeof fetch = fetch,
+): Promise<ClientResult<RecentCasesResponse>> {
+  const response = await fetchImpl("/api/cases/recent");
+  const payload = await readJson(response);
+  if (
+    response.ok &&
+    payload &&
+    typeof payload === "object" &&
+    "ok" in payload &&
+    payload.ok === true &&
+    "cases" in payload &&
+    Array.isArray(payload.cases)
+  ) {
+    return {
+      ok: true,
+      status: response.status,
+      body: payload as RecentCasesResponse,
+    };
+  }
+  return errorFrom(
+    response.status,
+    payload,
+    "Recent Cases could not be loaded.",
+  );
 }

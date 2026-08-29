@@ -26,6 +26,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Past Cases keeps manual retrieval by known Case ID. The same homepage area also lists the five most recently executed Cases as an MVP convenience. That list is not a Case-management system: there is no pagination, search, deletion, renaming, or rerun control.
+
 ## Scripts
 
 | Command | Purpose |
@@ -46,4 +48,4 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Scope note
 
-MVP implementation is complete: charge-sheet upload, Case and Tribunal Run persistence, Model Call audit, Zod contracts, instructor profiles, runtime prompts, version-controlled OpenRouter assignment, bounded retry, the reusable Tribunal engine, persisted results/accounting, HTTP execute/results routes, and the reviewer UI. Production is a Render Free Web Service with auto-deploy from `main`. See [docs/deployment.md](docs/deployment.md) and [docs/implementation-plan.md](docs/implementation-plan.md). Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).
+MVP implementation is complete: charge-sheet upload, Case and Tribunal Run persistence, Model Call audit, Zod contracts, instructor profiles, runtime prompts, version-controlled OpenRouter assignment, bounded retry, the reusable Tribunal engine, persisted results/accounting, HTTP execute/results routes, and the reviewer UI. The homepage also lists the five most recently executed Cases while keeping manual known-Case retrieval. Production is a Render Free Web Service with auto-deploy from `main`. See [docs/deployment.md](docs/deployment.md) and [docs/implementation-plan.md](docs/implementation-plan.md). Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).

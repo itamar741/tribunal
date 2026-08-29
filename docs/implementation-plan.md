@@ -43,7 +43,7 @@ Completed and verified:
 - Case-level dual-run coordinator `executeCaseTribunals`: resolves the two durable Runs from persistence, starts `SAME_MODEL` and `MIXED_MODELS` concurrently, and keeps their outcomes independent.
 - Persisted results read model under `lib/results`: reconstructs Case metadata, both Runs, validated Advocate/Judge outputs, attempt history, and agent/stage/run/Case token-cost totals from `model_calls`. Each total is a known subtotal plus per-metric completeness. Duplicate successes and inconsistent `SUCCEEDED` Runs fail closed. Does not execute models or replace a persisted `final_verdict`.
 - HTTP execution and results routes: `POST /api/cases/[id]/execute` triggers `executeCaseTribunals` from the persisted charge sheet; `GET /api/cases/[id]/results` returns `getCaseResults`. Upload and Case metadata GET keep their existing contracts.
-- Reviewer UI: upload a `.md` charge sheet, start the Tribunal, wait for the synchronous execute request, then display persisted SAME_MODEL and MIXED_MODELS results. A Case is recoverable at `/cases/[id]` via `GET` results only.
+- Reviewer UI: upload a `.md` charge sheet, start the Tribunal, wait for the synchronous execute request, then display persisted SAME_MODEL and MIXED_MODELS results. A Case is recoverable at `/cases/[id]` via `GET` results only. The homepage Past Cases area keeps manual known-Case ID entry and also lists the five most recently executed Cases as an MVP convenience, not a Case-management system.
 - Deployment and production host: the app is deployed as a Render Free Web Service (`npm run start`) with GitHub `main` auto-deploy, Supabase transaction-pooler PostgreSQL, and OpenRouter. The accepted production dual-run E2E succeeded. Canonical notes: `docs/deployment.md`.
 
 ## Recommended phase sequence (complete)
@@ -524,7 +524,7 @@ Phase 8 and the designed response contracts.
 
 ## Phase 10 — Durable past-Case retrieval
 
-Completed for retrieval by known Case ID. A browsable Case list remains post-MVP.
+Completed for retrieval by known Case ID. The homepage now also shows the five most recently executed Cases as an MVP convenience; manual known-Case retrieval remains. A full browsable Case-management list remains post-MVP.
 
 ### Goal
 
@@ -664,7 +664,7 @@ Passed. The following worked end-to-end in automated tests and the accepted prod
 Intentionally not implemented. Do not treat these as unfinished MVP phases:
 
 - Authentication and access control
-- Browsable Case listing/search
+- Browsable Case listing/search (the homepage five-item recent list is an MVP convenience, not this)
 - Asynchronous or background execution if deployment requirements change
 - Privacy/retention policy hardening for persisted charge-sheet text
 - Replacing volatile or free model endpoints after future catalog/availability changes

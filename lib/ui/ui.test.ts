@@ -2,9 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { OpenCasePanel } from "../../components/OpenCaseForm";
 import { CaseResultsView } from "../../components/CaseResultsView";
 import { TribunalExecutionState } from "../../components/TribunalExecutionState";
-import { formatCount, formatUsd, formatVerdict } from "./format";
+import {
+  formatCount,
+  formatLocalDateTime,
+  formatUsd,
+  formatVerdict,
+  shortenCaseId,
+} from "./format";
 import {
   advocate,
   caseResults,
@@ -16,6 +23,7 @@ import {
 import {
   executeCase,
   getCaseResults,
+  getRecentCases,
   loadPersistedResultsAfterExecution,
   uploadChargeSheet,
 } from "./tribunal-client";
@@ -40,6 +48,20 @@ describe("format", () => {
       "$0 known (incomplete)",
     );
     assert.equal(formatCount({ value: 12, complete: false }), "12 known (incomplete)");
+  });
+
+  it("formats a persisted UTC timestamp in local date and time", () => {
+    const rendered = formatLocalDateTime("2026-08-29T10:42:00.000Z");
+    const expected = formatLocalDateTime(new Date("2026-08-29T10:42:00.000Z"));
+    assert.equal(rendered, expected);
+    assert.match(rendered, /Aug 2026 · \d{2}:\d{2}/);
+  });
+
+  it("shortens a Case ID for secondary display", () => {
+    assert.equal(
+      shortenCaseId("7f3a2cde-0000-4000-8000-000000000001"),
+      "7f3a2c",
+    );
   });
 });
 
@@ -154,6 +176,28 @@ describe("tribunal client", () => {
       "GET /api/cases/00000000-0000-4000-8000-000000000001/results",
     ]);
   });
+
+  it("loads recent Cases with GET only and never posts execute", async () => {
+    const methods: string[] = [];
+    const fetchImpl = mockFetch((url, init) => {
+      methods.push(`${init?.method ?? "GET"} ${url}`);
+      return Response.json({
+        ok: true,
+        cases: [
+          {
+            caseId: "00000000-0000-4000-8000-000000000001",
+            originalFileName: "01-t-001-charge-sheet.md",
+            executedAt: "2026-08-29T10:42:00.000Z",
+            totalCost: { value: "0.0124", complete: true },
+          },
+        ],
+      });
+    });
+    const result = await getRecentCases(fetchImpl);
+    assert.equal(result.ok, true);
+    assert.deepEqual(methods, ["GET /api/cases/recent"]);
+    assert.equal(methods.some((entry) => entry.includes("/execute")), false);
+  });
 });
 
 describe("CaseResultsView", () => {
@@ -238,6 +282,128 @@ describe("CaseResultsView", () => {
     );
     assert.match(html, /This run is incomplete/);
     assert.equal(html.includes("Final verdict"), false);
+  });
+});
+
+function recentCaseView(
+  index: number,
+  overrides: {
+    caseId?: string;
+    originalFileName?: string;
+    executedAt?: string;
+    totalCost?: { value: string; complete: boolean };
+  } = {},
+) {
+  return {
+    caseId: overrides.caseId ?? `00000000-0000-4000-8000-00000000000${index}`,
+    originalFileName: overrides.originalFileName ?? `case-${index}.md`,
+    executedAt: overrides.executedAt ?? `2026-08-2${index}T10:42:00.000Z`,
+    totalCost: overrides.totalCost ?? { value: "0.0124", complete: true },
+  };
+}
+
+describe("OpenCasePanel", () => {
+  it("keeps the manual Case ID input while rendering five recent Cases", () => {
+    const cases = [5, 4, 3, 2, 1].map((index) => recentCaseView(index));
+    const html = renderToStaticMarkup(
+      createElement(OpenCasePanel, {
+        formError: null,
+        recent: { status: "ready", cases },
+        onSubmit() {},
+      }),
+    );
+    assert.match(html, /Open an existing Case/);
+    assert.match(html, /name="caseId"/);
+    assert.match(html, /Recent Cases/);
+    assert.ok(html.indexOf("case-5.md") < html.indexOf("case-4.md"));
+    assert.ok(html.indexOf("case-4.md") < html.indexOf("case-1.md"));
+    assert.match(html, /href="\/cases\/00000000-0000-4000-8000-000000000005"/);
+    assert.equal(html.includes("/execute"), false);
+    assert.equal(html.includes("method=\"post\""), false);
+  });
+
+  it("renders filename, local date-time, shortened Case ID, and cost", () => {
+    const executedAt = "2026-08-29T10:42:00.000Z";
+    const html = renderToStaticMarkup(
+      createElement(OpenCasePanel, {
+        formError: null,
+        recent: {
+          status: "ready",
+          cases: [
+            recentCaseView(1, {
+              caseId: "7f3a2cde-0000-4000-8000-000000000001",
+              originalFileName: "01-t-001-charge-sheet.md",
+              executedAt,
+              totalCost: { value: "0.0124", complete: true },
+            }),
+          ],
+        },
+        onSubmit() {},
+      }),
+    );
+    assert.match(html, /01-t-001-charge-sheet\.md/);
+    assert.equal(html.includes(formatLocalDateTime(executedAt)), true);
+    assert.match(html, /Case 7f3a2c…/);
+    assert.match(html, /\$0\.0124/);
+    assert.equal(html.includes("known (incomplete)"), false);
+  });
+
+  it("marks incomplete cost as known but not guaranteed", () => {
+    const html = renderToStaticMarkup(
+      createElement(OpenCasePanel, {
+        formError: null,
+        recent: {
+          status: "ready",
+          cases: [
+            recentCaseView(1, {
+              totalCost: { value: "0.0124", complete: false },
+            }),
+          ],
+        },
+        onSubmit() {},
+      }),
+    );
+    assert.match(html, /\$0\.0124 known \(incomplete\)/);
+  });
+
+  it("shows a loading state only in the Recent Cases area", () => {
+    const html = renderToStaticMarkup(
+      createElement(OpenCasePanel, {
+        formError: null,
+        recent: { status: "loading" },
+        onSubmit() {},
+      }),
+    );
+    assert.match(html, /Loading recent Cases/);
+    assert.match(html, /name="caseId"/);
+    assert.match(html, /Open Case/);
+  });
+
+  it("shows the empty recent-list state without removing Case ID entry", () => {
+    const html = renderToStaticMarkup(
+      createElement(OpenCasePanel, {
+        formError: null,
+        recent: { status: "empty" },
+        onSubmit() {},
+      }),
+    );
+    assert.match(html, /No executed Cases yet/);
+    assert.match(html, /name="caseId"/);
+    assert.match(html, /Open Case/);
+  });
+
+  it("keeps manual Case opening available when recent-history loading fails", () => {
+    const html = renderToStaticMarkup(
+      createElement(OpenCasePanel, {
+        formError: null,
+        recent: { status: "error" },
+        onSubmit() {},
+      }),
+    );
+    assert.match(html, /Recent Cases could not be loaded/);
+    assert.match(html, /name="caseId"/);
+    assert.match(html, /Open Case/);
+    assert.match(html, /id="case-id"/);
   });
 });
 
