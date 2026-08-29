@@ -2,7 +2,7 @@
 
 This is the canonical rationale for the version-controlled OpenRouter model assignment. Runtime IDs live in `lib/ai/configurations/`. Profiles, prompt builders, response contracts, and UI do not contain model IDs.
 
-The current selection is intentionally **free-first** for the course/MVP.
+The current selection is **no longer all-free**. SAME_MODEL and six MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1` is an explicitly paid ID. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
 
 ## Purpose
 
@@ -19,7 +19,7 @@ Before any configuration change or live verification, every concrete model ID mu
 
 `GET https://openrouter.ai/api/v1/models`
 
-That catalog is the authoritative source for whether an ID is currently routable and whether its listed prompt/completion price is zero.
+That catalog is the authoritative source for whether an ID is currently routable and whether its listed prompt/completion price matches the expected free or paid configuration.
 
 A model-detail webpage on openrouter.ai is **not** sufficient evidence. Web pages can describe a model family, a paid sibling, or a `:free` suffix that is not currently present in the API catalog. The first Phase 4B live request used `openai/gpt-oss-120b:free` and received HTTP 404; that failure was audited and is evidence of this distinction, not a successful Tribunal call.
 
@@ -28,7 +28,7 @@ The current IDs below were revalidated against the live `/api/v1/models` catalog
 ## Selection constraints
 
 - **OpenRouter is the AI gateway.** All model calls go through OpenRouter.
-- **The current MVP uses free endpoints.** Every primary and standby ID ends with `:free`, and the live catalog must currently list zero prompt and completion prices for that exact ID.
+- **Model configuration may contain paid endpoints.** Concrete IDs, output capabilities, and current pricing must be explicitly documented and catalog-verified. Free-configured IDs must still list zero prompt and completion prices. The one current paid primary is `openai/gpt-oss-120b`.
 - **Concrete model IDs are required** for reproducibility and audit. Each configured seat must name a specific OpenRouter model identity.
 - **`openrouter/free` is inappropriate.** That router may choose different models dynamically. A Tribunal Run cannot treat a randomly selected model as a stable experimental condition.
 - **Adequate context length is required.** A run later sends the charge sheet, role/profile instructions, the response contract, and — for judges — four validated advocate outputs. The selected windows are larger than those current Tribunal inputs.
@@ -108,7 +108,7 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 
 | Tribunal role | Concrete model ID | Provider / family | Free | Context size | Structured-output level | Selection rationale / tradeoff |
 | --- | --- | --- | --- | --- | --- | --- |
-| `DEFENSE_1` | `liquid/lfm-2.5-2.6b:free` | Liquid AI LFM2.5-2.6B | `:free` | 64K (65,536) | `JSON_SCHEMA` | Replaces Dots3 after a deployed HTTP 400. Live catalog lists `response_format` and `structured_outputs`. Course/MVP only: prompts/outputs may be retained to train Liquid models. |
+| `DEFENSE_1` | `openai/gpt-oss-120b` | OpenAI gpt-oss-120b | paid | 128K (131,072) | `JSON_SCHEMA` | Replaces Liquid after two deployed completions with null assistant content. Live catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 | `DEFENSE_2` | `minimax/minimax-m2.7:free` | MiniMax M2.7 | `:free` | 192K (196,608) | `JSON_OBJECT` | Different MiniMax generation from M3. Tradeoff: smaller window than M3; structure is JSON mode, not JSON Schema. |
 | `PROSECUTION_1` | `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 | `:free` | 256K (262,144) | `PROMPT_ONLY` | Promoted from standby after Gemma 4 31B returned provider 429s on both allowed attempts. Tradeoff: no `response_format`; JSON parse + Zod required. |
 | `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
@@ -178,7 +178,7 @@ A later deployed Case used `dots-studio/dots-3-note-preview:free` as MIXED `DEFE
 
 `SAME_MODEL` (`minimax/minimax-m3:free`) remains a complete successful deployed 7-agent Run and was not changed.
 
-### Why MIXED `DEFENSE_1` is Liquid LFM2.5-2.6B
+### Why MIXED `DEFENSE_1` was Liquid LFM2.5-2.6B
 
 `liquid/lfm-2.5-2.6b:free` was selected only after live `/api/v1/models` verification on 2026-08-29:
 
@@ -192,6 +192,27 @@ A later deployed Case used `dots-studio/dots-3-note-preview:free` as MIXED `DEFE
 OpenRouter’s model page states that prompts and outputs may be retained and used to train Liquid models. This remains a course/MVP configuration, not a privacy-sensitive production recommendation.
 
 This is an explicit versioned configuration change before a fresh Case. It is not runtime fallback.
+
+### Later deployed MIXED `DEFENSE_1` failure (Liquid)
+
+A later deployed Case used `liquid/lfm-2.5-2.6b:free` as MIXED `DEFENSE_1`. Both allowed attempts returned a valid OpenRouter completion envelope with no provider error, `message.content = null`, reasoning present, and no usable assistant JSON. Tribunal output remains assistant content → JSON → Zod. The parser was not changed to consume reasoning. Liquid is therefore unsuitable for this response boundary and was removed from the primary MIXED assignment. It was not added to standby.
+
+`SAME_MODEL` (`minimax/minimax-m3:free`) remains a complete successful deployed 7-agent Run and was not changed.
+
+### Why MIXED `DEFENSE_1` is paid GPT-OSS 120B
+
+`openai/gpt-oss-120b` was selected only after live `/api/v1/models` verification on 2026-08-29 and a sanitized OpenRouter key/credits diagnostic that confirmed paid credit is available:
+
+- exact ID present (this is the paid sibling; `openai/gpt-oss-120b:free` remains absent and is not used);
+- listed `pricing.prompt = 0.000000037` and `pricing.completion = 0.00000017`;
+- 128K context (131,072 tokens);
+- catalog listed both `response_format` and `structured_outputs` → configured `JSON_SCHEMA`;
+- not marked agentic-harness-only;
+- ordinary API access, not harness-only.
+
+This seat is paid because the remaining MIXED Advocate-stage failure was isolated to a free endpoint that returned null assistant content. GPT-OSS 120B offers JSON Schema support and substantially more robust provider routing than the failed free defense candidates (Inkling 403, Lightning timeout + malformed JSON, Dots3 HTTP 400, Liquid null content). Provider-reported usage/cost remains audited; execution does not calculate the charge.
+
+This is an explicit versioned configuration revision before a fresh Case. It is not runtime fallback.
 
 ### Why MIXED `PROSECUTION_1` is Laguna S 2.1
 
@@ -251,10 +272,11 @@ Later execution must record the actual model identity returned by OpenRouter so 
 
 ## Cost rationale
 
-- All currently selected primary and standby IDs use the `:free` suffix and were confirmed at zero listed prompt/completion price in the live catalog.
-- While those free endpoints remain available, MVP inference cost is zero.
-- Free requests remain subject to OpenRouter limits and availability. Capacity, latency, and rate limits can change without notice.
-- Zero price is a current operational property of this course/demo configuration, not a permanent product guarantee.
+- SAME_MODEL, the other six MIXED seats, and the standby pool remain `:free` IDs and must still list zero prompt/completion prices in the live catalog.
+- MIXED `DEFENSE_1` is the paid ID `openai/gpt-oss-120b`. On 2026-08-29 the catalog listed `pricing.prompt = 0.000000037` and `pricing.completion = 0.00000017`.
+- Provider-reported usage and cost for that Model Call are persisted as returned. Execution does not calculate the charge.
+- Free requests remain subject to OpenRouter limits and availability. Capacity, latency, rate limits, and listed prices can change without notice.
+- Zero price on free-configured IDs is a current operational property, not a permanent product guarantee.
 
 Do not treat any dated free-tier request quota as an architectural invariant.
 
@@ -271,6 +293,13 @@ Free endpoints can differ from paid endpoints — and from each other — in log
 This document does not resolve the project’s broader retention/privacy decision for persisted charge-sheet text.
 
 ## Research snapshot
+
+**Research snapshot: 2026-08-29 (MIXED `DEFENSE_1` revised to paid `openai/gpt-oss-120b` after Liquid null content)**
+
+- `SAME_MODEL` `minimax/minimax-m3:free` remains a complete successful deployed 7-agent Run and was not changed.
+- MIXED `DEFENSE_1` `liquid/lfm-2.5-2.6b:free` failed in a later deployed Case: both allowed attempts returned a valid completion envelope with `message.content = null`, reasoning present, and no usable assistant JSON. Removed from primary use; not added to standby.
+- `openai/gpt-oss-120b` was present in the live catalog with non-zero `pricing.prompt = 0.000000037`, `pricing.completion = 0.00000017`, `response_format`, `structured_outputs`, and 128K context (131,072). Configured `JSON_SCHEMA`.
+- The project no longer requires every primary ID to be a `:free` endpoint. Free-configured IDs must still verify as zero-price. Paid IDs must be explicit and catalog-verified.
 
 **Research snapshot: 2026-08-29 (MIXED `DEFENSE_1` revised to Liquid LFM2.5-2.6B after Dots3 HTTP 400)**
 
@@ -319,7 +348,8 @@ Revisit model selection when any of the following is true:
 
 - a selected model is removed or deprecated;
 - the exact ID is absent from the live `/api/v1/models` catalog;
-- the free endpoint is no longer listed at zero prompt/completion price;
+- a free-configured ID is no longer listed at zero prompt/completion price;
+- a paid-configured ID is absent, becomes unroutable, or no longer lists non-zero pricing;
 - availability problems persist after the normal retry policy;
 - structured-output behavior is incompatible with the Tribunal contracts;
 - contract-validation failure rate is excessive;

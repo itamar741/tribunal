@@ -24,8 +24,18 @@ export const SAME_MODEL_BY_ROLE = {
   [TribunalAgentRole.JUDGE_3]: SAME_MODEL_ID,
 } as const satisfies Record<TribunalAgentRole, typeof SAME_MODEL_ID>;
 
+/**
+ * Explicitly paid catalog IDs. Every other configured primary and
+ * standby ID must remain a zero-price endpoint.
+ */
+export const EXPLICITLY_PAID_MODEL_IDS = ["openai/gpt-oss-120b"] as const;
+
+export function isExplicitlyPaidModelId(modelId: string): boolean {
+  return (EXPLICITLY_PAID_MODEL_IDS as readonly string[]).includes(modelId);
+}
+
 export const MIXED_MODELS_BY_ROLE = {
-  [TribunalAgentRole.DEFENSE_1]: "liquid/lfm-2.5-2.6b:free",
+  [TribunalAgentRole.DEFENSE_1]: "openai/gpt-oss-120b",
   [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
   [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
   [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",

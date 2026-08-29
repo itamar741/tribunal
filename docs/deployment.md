@@ -95,9 +95,9 @@ Supported on the selected topology:
 
 There is no writable-disk assumption. There is no process-local state required for correctness. Duplicate execute uses the durable `PENDING → RUNNING` claim.
 
-## Free OpenRouter models
+## OpenRouter models
 
-Current IDs are `:free` endpoints. Availability, latency, and rate limits are external and volatile. Retries lengthen the HTTP request. Provider failure is an expected Tribunal outcome (`FAILED` Run, no invented verdict). There is no automatic cross-model fallback. Do not change model selection as a deploy workaround.
+Most configured IDs remain `:free` endpoints. MIXED `DEFENSE_1` is the paid ID `openai/gpt-oss-120b`. Availability, latency, rate limits, and listed prices are external and volatile. Retries lengthen the HTTP request. Provider failure is an expected Tribunal outcome (`FAILED` Run, no invented verdict). Provider-reported cost is audited. There is no automatic cross-model fallback. Do not change model selection as a deploy workaround.
 
 ## Deploy procedure
 

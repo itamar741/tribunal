@@ -10,6 +10,7 @@ import {
 } from "../profiles";
 import { buildJudgePrompt, buildRepresentativePrompt } from "../prompts";
 import {
+  EXPLICITLY_PAID_MODEL_IDS,
   MIXED_MODELS_BY_ROLE,
   MODEL_OUTPUT_MODES,
   ModelOutputMode,
@@ -21,6 +22,7 @@ import {
   getModelIdForRole,
   getOutputModeForModel,
   getRoleModelAssignment,
+  isExplicitlyPaidModelId,
   listConfiguredModelIds,
   listStandbyModelIds,
 } from "./index";
@@ -116,7 +118,7 @@ describe("MIXED_MODELS assignment", () => {
     assert.equal(modelIds.length, 7);
     assert.equal(new Set(modelIds).size, 7);
     assert.deepEqual(MIXED_MODELS_BY_ROLE, {
-      [TribunalAgentRole.DEFENSE_1]: "liquid/lfm-2.5-2.6b:free",
+      [TribunalAgentRole.DEFENSE_1]: "openai/gpt-oss-120b",
       [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
       [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
@@ -135,9 +137,23 @@ describe("MIXED_MODELS assignment", () => {
 });
 
 describe("model-selection constraints", () => {
-  it("marks every current primary ID as a :free endpoint", () => {
-    for (const modelId of PRIMARY_MODEL_IDS) {
+  it("allows only the documented paid primary ID", () => {
+    assert.deepEqual(EXPLICITLY_PAID_MODEL_IDS, ["openai/gpt-oss-120b"]);
+    assert.equal(isExplicitlyPaidModelId("openai/gpt-oss-120b"), true);
+    assert.equal(
+      MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
+      "openai/gpt-oss-120b",
+    );
+    assert.equal(PRIMARY_MODEL_IDS.includes("openai/gpt-oss-120b"), true);
+
+    const expectedFree = [
+      ...PRIMARY_MODEL_IDS,
+      ...STANDBY_MODEL_IDS,
+    ].filter((modelId) => !isExplicitlyPaidModelId(modelId));
+
+    for (const modelId of expectedFree) {
       assert.match(modelId, /:free$/);
+      assert.equal(isExplicitlyPaidModelId(modelId), false);
     }
   });
 
@@ -179,7 +195,13 @@ describe("model-selection constraints", () => {
     );
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
-      "liquid/lfm-2.5-2.6b:free",
+      "openai/gpt-oss-120b",
+    );
+    assert.equal(
+      (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
+        "liquid/lfm-2.5-2.6b:free",
+      ),
+      false,
     );
     assert.equal(
       (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
@@ -189,6 +211,10 @@ describe("model-selection constraints", () => {
     );
     assert.equal(
       STANDBY_MODEL_IDS.includes("dots-studio/dots-3-note-preview:free"),
+      false,
+    );
+    assert.equal(
+      STANDBY_MODEL_IDS.includes("liquid/lfm-2.5-2.6b:free"),
       false,
     );
     assert.equal(
@@ -320,7 +346,7 @@ describe("model output modes", () => {
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
-      getOutputModeForModel("liquid/lfm-2.5-2.6b:free"),
+      getOutputModeForModel("openai/gpt-oss-120b"),
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
