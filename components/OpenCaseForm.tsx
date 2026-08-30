@@ -16,8 +16,16 @@ export type RecentCasesState =
 
 export function RecentCases({ state }: { state: RecentCasesState }) {
   return (
-    <div className="mt-8 border-t border-[var(--border)] pt-6">
-      <h3 className="text-base font-medium">Recent Cases</h3>
+    <div className="mt-7 border-t border-[#9b7c4d] pt-6">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-[var(--burgundy)]">
+            Court ledger
+          </p>
+          <h3 className="display-face mt-1 text-xl font-bold">Recent Cases</h3>
+        </div>
+        <span className="text-2xl text-[#9b7131]" aria-hidden="true">§</span>
+      </div>
       {state.status === "loading" ? (
         <p className="mt-3 text-sm text-[var(--muted)]">Loading recent Cases…</p>
       ) : null}
@@ -30,21 +38,22 @@ export function RecentCases({ state }: { state: RecentCasesState }) {
         </p>
       ) : null}
       {state.status === "ready" ? (
-        <ul className="mt-3 divide-y divide-[var(--border)]">
+        <ul className="mt-3 divide-y divide-[#aa8c60]">
           {state.cases.map((item) => (
             <li key={item.caseId}>
               <Link
                 href={`/cases/${item.caseId}`}
-                className="block py-3 hover:bg-[var(--background)]"
+                className="docket-row block py-3 pl-4"
               >
-                <p className="text-sm font-medium">{item.originalFileName}</p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  {formatLocalDateTime(item.executedAt)}
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate text-sm font-semibold">{item.originalFileName}</p>
+                  <p className="shrink-0 text-xs font-semibold text-[var(--burgundy)]">
+                    {formatUsd(item.totalCost)}
+                  </p>
+                </div>
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  {formatLocalDateTime(item.executedAt)} · Case {shortenCaseId(item.caseId)}…
                 </p>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  Case {shortenCaseId(item.caseId)}…
-                </p>
-                <p className="mt-1 text-sm">{formatUsd(item.totalCost)}</p>
               </Link>
             </li>
           ))}
@@ -66,9 +75,12 @@ export function OpenCasePanel({
   return (
     <section
       aria-labelledby="open-case-heading"
-      className="w-full max-w-xl border border-[var(--border)] bg-[var(--surface)] p-6"
+      className="parchment-panel w-full overflow-hidden p-6"
     >
-      <h2 id="open-case-heading" className="text-lg font-medium">
+      <p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-[var(--burgundy)]">
+        Archive access
+      </p>
+      <h2 id="open-case-heading" className="display-face mt-1 text-2xl font-bold">
         Open an existing Case
       </h2>
       <p className="mt-2 text-sm text-[var(--muted)]">
@@ -85,12 +97,12 @@ export function OpenCasePanel({
             type="text"
             autoComplete="off"
             spellCheck={false}
-            className="mt-2 w-full border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
+            className="court-input mt-2 w-full px-3 py-2.5 text-sm"
           />
         </div>
         <button
           type="submit"
-          className="border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm"
+          className="court-button-secondary w-full px-4 py-2 text-sm font-semibold"
         >
           Open Case
         </button>
