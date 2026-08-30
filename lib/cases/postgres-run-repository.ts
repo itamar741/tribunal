@@ -45,7 +45,8 @@ export class PostgresTribunalRunRepository {
           update tribunal_runs
           set
             status = 'RUNNING',
-            started_at = now()
+            started_at = now(),
+            recovery_cycle = greatest(recovery_cycle, 1)
           where id = $1
             and status = 'PENDING'
           returning ${TRIBUNAL_RUN_COLUMNS}
@@ -53,6 +54,28 @@ export class PostgresTribunalRunRepository {
         [runId],
       );
       return requireUpdatedRun(result.rows[0], runId, "marked RUNNING");
+    });
+  }
+
+  /** Atomically claims one failed Run for a user-triggered recovery cycle. */
+  async claimResume(runId: string): Promise<TribunalRunRecord> {
+    return withClient(async (client) => {
+      const result = await client.query<RunRow>(
+        `
+          update tribunal_runs
+          set
+            status = 'RUNNING',
+            started_at = now(),
+            completed_at = null,
+            failure_reason = null,
+            recovery_cycle = recovery_cycle + 1
+          where id = $1
+            and status = 'FAILED'
+          returning ${TRIBUNAL_RUN_COLUMNS}
+        `,
+        [runId],
+      );
+      return requireUpdatedRun(result.rows[0], runId, "claimed for recovery");
     });
   }
 

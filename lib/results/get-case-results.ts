@@ -22,6 +22,7 @@ import {
   type ModelCallRepository,
 } from "../model-calls";
 import { sumUsage } from "./accounting";
+import { classifyFailure } from "../ai/execution";
 import type {
   CaseResults,
   ModelCallAttemptView,
@@ -82,7 +83,26 @@ function sortModelCalls(rows: readonly ModelCallRecord[]): ModelCallRecord[] {
     if (roleDelta !== 0) {
       return roleDelta;
     }
-    return left.attempt - right.attempt;
+    const cycleDelta =
+      (left.recoveryCycle ?? 1) - (right.recoveryCycle ?? 1);
+    if (cycleDelta !== 0) {
+      return cycleDelta;
+    }
+    const sourceDelta =
+      (left.modelSource === "PRIMARY" ? 0 : 1) -
+      (right.modelSource === "PRIMARY" ? 0 : 1);
+    if (sourceDelta !== 0) {
+      return sourceDelta;
+    }
+    const attemptDelta = left.attempt - right.attempt;
+    if (attemptDelta !== 0) {
+      return attemptDelta;
+    }
+    const createdAtDelta = left.createdAt.getTime() - right.createdAt.getTime();
+    if (createdAtDelta !== 0) {
+      return createdAtDelta;
+    }
+    return left.id.localeCompare(right.id);
   });
 }
 
@@ -135,6 +155,10 @@ function toAttemptView(
     agentRole: row.agentRole,
     attempt: row.attempt,
     model: row.model,
+    modelSource: row.modelSource ?? "PRIMARY",
+    recoveryCycle: row.recoveryCycle ?? 1,
+    failureClassification: row.failureClassification ?? (row.status === ModelCallStatus.FAILED ? classifyFailure({ errorType: row.errorType, httpStatus: null }).classification : null),
+    fallbackEligible: row.status === ModelCallStatus.FAILED && classifyFailure({ errorType: row.errorType, httpStatus: null }).fallbackEligible,
     status: row.status,
     inputTokens: row.inputTokens,
     outputTokens: row.outputTokens,
@@ -237,6 +261,8 @@ function reconstructRun(
       status: run.status,
       finalVerdict: run.finalVerdict,
       failureReason: run.failureReason,
+      recoveryCycle: run.recoveryCycle,
+      fallbackUsed: rows.some((row) => row.modelSource === "FALLBACK"),
       startedAt: run.startedAt,
       completedAt: run.completedAt,
       advocates,

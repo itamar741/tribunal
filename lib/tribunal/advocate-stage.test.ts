@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
 import { getModelIdForRole, TribunalRunKind } from "../ai/configurations";
+import { STANDBY_MODEL_IDS } from "../ai/configurations";
 import type { AdvocateResponse } from "../ai/contracts";
 import { AttemptErrorType } from "../ai/execution";
 import {
@@ -388,6 +389,72 @@ describe("executeAdvocateStage", () => {
         .filter((record) => record.agentRole === "PROSECUTION_1")
         .map((record) => record.attempt),
       [1, 2],
+    );
+  });
+
+  it("uses one distinct MIXED_MODELS fallback only after the primary exhausts two eligible attempts", async () => {
+    const { result, modelCalls } = await runStage({
+      runKind: TribunalRunKind.MIXED_MODELS,
+      respond: async (input, role) => {
+        if (
+          role === RepresentativeRole.PROSECUTION_1 &&
+          input.model ===
+            getModelIdForRole(TribunalRunKind.MIXED_MODELS, role)
+        ) {
+          return httpFailure(429);
+        }
+        return successTransport(role);
+      },
+    });
+
+    assert.equal(result.ok, true);
+    if (!result.ok) {
+      return;
+    }
+    const recoveredCalls = modelCalls.records.filter(
+      (record) => record.agentRole === RepresentativeRole.PROSECUTION_1,
+    );
+    assert.equal(recoveredCalls.length, 3);
+    assert.deepEqual(
+      recoveredCalls.map((record) => record.modelSource),
+      ["PRIMARY", "PRIMARY", "FALLBACK"],
+    );
+    assert.deepEqual(
+      recoveredCalls.map((record) => record.attempt),
+      [1, 2, 1],
+    );
+    assert.equal(
+      recoveredCalls[2]?.model ===
+        getModelIdForRole(
+          TribunalRunKind.MIXED_MODELS,
+          RepresentativeRole.PROSECUTION_1,
+        ),
+      false,
+    );
+    assert.equal(STANDBY_MODEL_IDS.includes(recoveredCalls[2]?.model as never), true);
+    assert.equal(result.agents.PROSECUTION_1.fallbackUsed, true);
+  });
+
+  it("never substitutes a SAME_MODEL seat after its two eligible attempts", async () => {
+    const { result, modelCalls } = await runStage({
+      respond: async (_input, role) =>
+        role === RepresentativeRole.PROSECUTION_1
+          ? httpFailure(429)
+          : successTransport(role),
+    });
+
+    assert.equal(result.ok, false);
+    if (result.ok) {
+      return;
+    }
+    assert.deepEqual(result.failedRoles, [RepresentativeRole.PROSECUTION_1]);
+    const failedSeatCalls = modelCalls.records.filter(
+      (record) => record.agentRole === RepresentativeRole.PROSECUTION_1,
+    );
+    assert.equal(failedSeatCalls.length, 2);
+    assert.equal(
+      failedSeatCalls.every((record) => record.modelSource === "PRIMARY"),
+      true,
     );
   });
 

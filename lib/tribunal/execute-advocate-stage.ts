@@ -1,12 +1,18 @@
-import { AttemptErrorType } from "../ai/execution";
+import { AttemptErrorType, classifyFailure } from "../ai/execution";
 import {
   executeRepresentativeWithRetry,
   type ExecuteRepresentativeWithRetryDeps,
   type RepresentativeExecutionResult,
 } from "../ai/execution";
-import type { TribunalRunKind } from "../ai/configurations";
+import {
+  getModelIdForRole,
+  mayUseFallback,
+  selectMixedFallbackModel,
+  type TribunalRunKind,
+} from "../ai/configurations";
+import { ModelCallSource } from "../model-calls";
 import type { AdvocateResponse } from "../ai/contracts";
-import { RepresentativeRole } from "../ai/profiles";
+import { RepresentativeRole, TribunalAgentRole } from "../ai/profiles";
 import { REPRESENTATIVE_ROLES_IN_ORDER } from "../ai/prompts/delimiters";
 import type { JudgeAdvocateResponses } from "../ai/prompts";
 
@@ -16,6 +22,10 @@ export type ExecuteAdvocateStageInput = {
   runKind: TribunalRunKind;
   chargeSheetMarkdown: string;
   apiKey: string;
+  recoveryCycle?: number;
+  skipMarkRunning?: boolean;
+  existingResponses?: Partial<Record<RepresentativeRole, AdvocateResponse>>;
+  activeFallbackModels?: readonly string[];
 };
 
 export type AdvocateStageRunRepository = {
@@ -33,6 +43,7 @@ export type ExecuteAdvocateStageDeps = Omit<
 export type AdvocateStageAgentMeta = {
   successfulAttempt: 1 | 2;
   model: string;
+  fallbackUsed?: boolean;
 };
 
 export type AdvocateStageSuccess = {
@@ -48,6 +59,8 @@ export type AdvocateStageAgentFailure = {
   errorType: string;
   errorMessage: string;
   attemptsMade: 0 | 1 | 2;
+  classification?: string;
+  fallbackEligible?: boolean;
 };
 
 export type AdvocateStageFailure = {
@@ -90,6 +103,10 @@ function failureFromResult(
     errorType: result.errorType,
     errorMessage: result.errorMessage,
     attemptsMade: result.attemptsMade,
+    ...classifyFailure({
+      errorType: result.errorType,
+      httpStatus: result.attempts.at(-1)?.failure?.httpStatus ?? null,
+    }),
   };
 }
 
@@ -179,7 +196,7 @@ export async function executeAdvocateStage(
   }
 
   try {
-    await deps.runs.markRunning(input.runId);
+    if (!input.skipMarkRunning) await deps.runs.markRunning(input.runId);
   } catch (error) {
     return {
       ...configurationFailures(
@@ -192,7 +209,7 @@ export async function executeAdvocateStage(
   }
 
   const settled = await Promise.allSettled(
-    REPRESENTATIVE_ROLES_IN_ORDER.map((role) =>
+    REPRESENTATIVE_ROLES_IN_ORDER.filter((role) => !input.existingResponses?.[role]).map((role) =>
       executeRepresentativeWithRetry(
         {
           caseId: input.caseId,
@@ -201,6 +218,7 @@ export async function executeAdvocateStage(
           role,
           chargeSheetMarkdown,
           apiKey: input.apiKey,
+          recoveryCycle: input.recoveryCycle ?? 1,
         },
         {
           ...deps,
@@ -211,11 +229,15 @@ export async function executeAdvocateStage(
   );
 
   const failures: AdvocateStageAgentFailure[] = [];
-  const responses: Partial<Record<RepresentativeRole, AdvocateResponse>> = {};
+  const responses: Partial<Record<RepresentativeRole, AdvocateResponse>> = { ...input.existingResponses };
   const agents: Partial<Record<RepresentativeRole, AdvocateStageAgentMeta>> = {};
+  for (const role of REPRESENTATIVE_ROLES_IN_ORDER) {
+    if (responses[role]) agents[role] = { successfulAttempt: 1, model: "persisted", fallbackUsed: false };
+  }
 
+  const unresolvedRoles = REPRESENTATIVE_ROLES_IN_ORDER.filter((role) => !input.existingResponses?.[role]);
   for (const [index, outcome] of settled.entries()) {
-    const role = REPRESENTATIVE_ROLES_IN_ORDER[index];
+    const role = unresolvedRoles[index];
     if (!isRepresentativeRole(role)) {
       continue;
     }
@@ -232,7 +254,47 @@ export async function executeAdvocateStage(
     agents[role] = {
       successfulAttempt: result.successfulAttempt,
       model: result.model,
+      fallbackUsed: false,
     };
+  }
+
+  // Only MIXED_MODELS may use version-controlled alternatives. Recovered
+  // seats are deliberately serialized so each fallback remains unique.
+  if (failures.length > 0 && mayUseFallback(input.runKind)) {
+    const activeModels: Set<string> = new Set(
+      Object.values(TribunalAgentRole).map((role) =>
+        getModelIdForRole(input.runKind, role),
+      ),
+    );
+    for (const model of input.activeFallbackModels ?? []) activeModels.add(model);
+    for (const failure of [...failures]) {
+      if (!failure.fallbackEligible) continue;
+      const fallbackModel = selectMixedFallbackModel(failure.role, [...activeModels]);
+      if (!fallbackModel) continue;
+      activeModels.add(fallbackModel);
+      const recovered = await executeRepresentativeWithRetry(
+        {
+          caseId: input.caseId,
+          runId: input.runId,
+          runKind: input.runKind,
+          role: failure.role,
+          chargeSheetMarkdown,
+          apiKey: input.apiKey,
+          model: fallbackModel,
+          modelSource: ModelCallSource.FALLBACK,
+          recoveryCycle: input.recoveryCycle ?? 1,
+        },
+        { ...deps, skipMarkRunning: true },
+      );
+      const failureIndex = failures.indexOf(failure);
+      if (recovered.ok) {
+        responses[failure.role] = recovered.response;
+        agents[failure.role] = { successfulAttempt: recovered.successfulAttempt, model: recovered.model, fallbackUsed: true };
+        failures.splice(failureIndex, 1);
+      } else {
+        failures[failureIndex] = failureFromResult(failure.role, recovered);
+      }
+    }
   }
 
   const success = failures.length === 0 ? toAdvocateStageSuccess(responses, agents) : null;

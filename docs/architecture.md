@@ -90,6 +90,10 @@ There is **one** Tribunal engine implementation under `lib/tribunal/`.
 
 Both runs call that engine. The only intentional difference between runs is **configuration** (`SAME_MODEL` vs `MIXED_MODELS`) from `lib/ai/configurations/`.
 
+### Bounded recovery
+
+Each seat first receives at most two attempts on its persisted primary model. For `MIXED_MODELS` only, a model/provider/output-specific failure after that bound may receive one distinct, version-controlled standby model for at most two attempts. `SAME_MODEL` never substitutes a model. Every attempt records the actual model, `PRIMARY`/`FALLBACK` provenance, and recovery cycle; costs and unknown-usage accounting include all attempts. A failed Run has no verdict. A user may resume a failed Run only through an atomic claim, which starts a new bounded cycle for unresolved seats while retaining validated outputs and audit history. 401/403/configuration failures are not fallback eligible.
+
 ### Why one engine vs duplicated implementations
 
 Duplicating “same-model” and “mixed-models” workflows would drift: stage ordering, failure handling, and validation rules would diverge. A single engine keeps procedure identical so run differences can be attributed to model assignment.
@@ -463,8 +467,8 @@ GET  /api/cases/{id}/results    → getCaseResults (read-only)
 - `GET /api/cases/recent` is a homepage convenience. It returns at most five Cases that have at least one Tribunal Run with `started_at`, ordered by `MAX(tribunal_runs.started_at) DESC`. It never executes a model or mutates Run state. Charge-sheet text, prompts, raw provider output, and secrets are omitted. Manual known-Case retrieval remains the supported reopen path.
 - `GET /api/cases/{id}/results` is read-only. It never executes a model or mutates Run state. Charge-sheet text is omitted. There is no Case-level combined verdict.
 - Invalid Case ID is 400; missing Case is 404; missing OpenRouter or database configuration is 503; invalid durable topology is 409; persisted integrity failure is 500 with `INTEGRITY_VIOLATION`. Unexpected failures return a safe 500 without secrets, stack traces, prompts, or raw provider payloads.
-- Start with this synchronous Next.js route. Do not pre-commit the MVP to a queue, job system, SSE, polling, or additional durable background infrastructure.
-- A complete Case can include 14 minimum model calls, up to 28 attempts with retries, and provider `Retry-After` delays. Host request-duration limits must be verified against that bound before production deployment. Do not introduce fire-and-forget, queue, worker, SSE, or polling infrastructure until those measurements require it.
+- Start with this synchronous Next.js route. The browser may poll the existing read-only results endpoint during an active request to reveal already-persisted seats; do not add a queue, job system, SSE, or additional durable background infrastructure.
+- A complete Case can include 14 minimum model calls, up to 28 attempts with retries, and provider `Retry-After` delays. Host request-duration limits must be verified against that bound before production deployment. Do not introduce fire-and-forget, queue, worker, or SSE infrastructure until those measurements require it.
 - Regardless of transport, idempotency and per-attempt auditing must prevent accidental duplicate calls and hidden cost.
 
 ## Failure handling and retry policy

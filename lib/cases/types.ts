@@ -27,6 +27,7 @@ export type TribunalRunRecord = {
   startedAt: Date | null;
   completedAt: Date | null;
   failureReason: string | null;
+  recoveryCycle: number;
   createdAt: Date;
 };
 

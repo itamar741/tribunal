@@ -120,7 +120,7 @@ describe("MIXED_MODELS assignment", () => {
     assert.deepEqual(MIXED_MODELS_BY_ROLE, {
       [TribunalAgentRole.DEFENSE_1]: "openai/gpt-4.1-mini",
       [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
-      [TribunalAgentRole.PROSECUTION_1]: "poolside/laguna-s-2.1:free",
+      [TribunalAgentRole.PROSECUTION_1]: "nvidia/nemotron-3-ultra-550b-a55b:free",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
       [TribunalAgentRole.JUDGE_1]: "openai/gpt-4.1",
       [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
@@ -202,13 +202,16 @@ describe("model-selection constraints", () => {
   it("keeps the standby pool unique and outside automatic role resolution", () => {
     assert.deepEqual(listStandbyModelIds(), STANDBY_MODEL_IDS);
     assert.deepEqual(STANDBY_MODEL_IDS, [
-      "nvidia/nemotron-3-ultra-550b-a55b:free",
       "google/gemma-4-31b-it:free",
-      "thinkingmachines/inkling-small:free",
+      "cohere/north-mini-code:free",
       "nvidia/nemotron-3.5-lightning:free",
+      "inclusionai/ling-3.0-flash-fin:free",
+      "z-ai/glm-5.2:free",
+      "google/gemma-4-26b-a4b-it:free",
+      "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     ]);
     assert.equal(
-      STANDBY_MODEL_IDS.includes("poolside/laguna-s-2.1:free"),
+      STANDBY_MODEL_IDS.includes("nvidia/nemotron-3-ultra-550b-a55b:free"),
       false,
     );
     assert.equal(
@@ -269,7 +272,7 @@ describe("model-selection constraints", () => {
     );
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.PROSECUTION_1],
-      "poolside/laguna-s-2.1:free",
+      "nvidia/nemotron-3-ultra-550b-a55b:free",
     );
     assert.equal(
       (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
@@ -277,7 +280,7 @@ describe("model-selection constraints", () => {
       ),
       false,
     );
-    assert.equal(STANDBY_MODEL_IDS.length, 4);
+    assert.equal(STANDBY_MODEL_IDS.length, 7);
     assert.equal(new Set(STANDBY_MODEL_IDS).size, STANDBY_MODEL_IDS.length);
 
     const resolved = Object.values(TribunalAgentRole).flatMap((role) =>
@@ -426,11 +429,7 @@ describe("model output modes", () => {
       ModelOutputMode.PROMPT_ONLY,
     );
     assert.equal(
-      getOutputModeForModel("poolside/laguna-s-2.1:free"),
-      ModelOutputMode.PROMPT_ONLY,
-    );
-    assert.equal(
-      getOutputModeForModel("thinkingmachines/inkling-small:free"),
+      getOutputModeForModel("cohere/north-mini-code:free"),
       ModelOutputMode.PROMPT_ONLY,
     );
     assert.throws(

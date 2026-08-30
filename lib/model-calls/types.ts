@@ -29,6 +29,14 @@ export type ModelCallStatus =
 
 export type ModelCallAttempt = 1 | 2;
 
+export const ModelCallSource = {
+  PRIMARY: "PRIMARY",
+  FALLBACK: "FALLBACK",
+} as const;
+
+export type ModelCallSource =
+  (typeof ModelCallSource)[keyof typeof ModelCallSource];
+
 export type NewModelCallInput = {
   caseId: string;
   runId: string;
@@ -36,6 +44,8 @@ export type NewModelCallInput = {
   agentRole: ModelCallAgentRole;
   attempt: ModelCallAttempt;
   model: string;
+  modelSource?: ModelCallSource;
+  recoveryCycle?: number;
   status: ModelCallStatus;
   inputTokens: number | null;
   outputTokens: number | null;
@@ -48,6 +58,7 @@ export type NewModelCallInput = {
   validatedResponse: unknown | null;
   errorType: string | null;
   errorMessage: string | null;
+  failureClassification?: string | null;
 };
 
 export type ModelCallRecord = NewModelCallInput & {
