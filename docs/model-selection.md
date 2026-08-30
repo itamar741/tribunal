@@ -112,7 +112,7 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 | --- | --- | --- | --- | --- | --- | --- |
 | `DEFENSE_1` | `openai/gpt-4.1-mini` | OpenAI GPT-4.1 Mini | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces paid GPT-OSS after two deployed completions with null assistant content and mandatory reasoning. Conventional text output; catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 | `DEFENSE_2` | `minimax/minimax-m2.7:free` | MiniMax M2.7 | `:free` | 192K (196,608) | `JSON_OBJECT` | Different MiniMax generation from M3. Tradeoff: smaller window than M3; structure is JSON mode, not JSON Schema. |
-| `PROSECUTION_1` | `poolside/laguna-s-2.1:free` | Poolside Laguna S 2.1 | `:free` | 256K (262,144) | `PROMPT_ONLY` | Promoted from standby after Gemma 4 31B returned provider 429s on both allowed attempts. Tradeoff: no `response_format`; JSON parse + Zod required. |
+| `PROSECUTION_1` | `nvidia/nemotron-3-ultra-550b-a55b:free` | NVIDIA Nemotron 3 Ultra | `:free` | 1M (1,000,000) | `PROMPT_ONLY` | Promoted from the approved standby pool after Laguna S 2.1 failed in deployed use. The 2026-08-30 public catalog check confirmed the exact zero-priced ID and 1M context window. Tradeoff: no `response_format`; JSON parse + Zod required. |
 | `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
 | `JUDGE_1` | `openai/gpt-4.1` | OpenAI GPT-4.1 | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces `z-ai/glm-5.2:free` after both allowed deployed attempts returned upstream HTTP 429. Catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 | `JUDGE_2` | `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super | `:free` | 256K (262,144) | `JSON_SCHEMA` | Open hybrid MoE with reasoning and schema support. Succeeded on attempt 1 in the latest deployed MIXED Judge stage and was not changed. |
@@ -298,6 +298,18 @@ This is an explicit versioned configuration revision before a fresh Case. It is 
 - promoting a recorded standby ID keeps the change auditable;
 - Gemma 4 31B remains a valid free ID and is now standby only.
 
+### Why MIXED `PROSECUTION_1` is now Nemotron 3 Ultra
+
+`poolside/laguna-s-2.1:free` subsequently failed in deployed use and was removed from both the primary assignment and standby pool. On 2026-08-30, the public OpenRouter catalog confirmed that the already approved standby `nvidia/nemotron-3-ultra-550b-a55b:free`:
+
+- is present under that exact concrete ID;
+- lists zero prompt and completion prices;
+- has a 1,000,000-token context window;
+- lists no `response_format` or structured-output capability, so it remains `PROMPT_ONLY`; and
+- remains distinct from all six other `MIXED_MODELS` seat IDs.
+
+Promoting this version-controlled standby is an explicit configuration revision for future Cases. It does not create an in-run fallback, change the same-model retry policy, or alter the advocate/judge contracts.
+
 ## Structured-output modes
 
 Runtime request shape is selected from centralized configuration, not by probing the provider during a Tribunal Run.
@@ -314,14 +326,17 @@ Do not repair malformed JSON, infer missing fields, or use response healing. Pro
 
 Currently approved emergency candidates, in recorded order:
 
-1. `nvidia/nemotron-3-ultra-550b-a55b:free` — larger Nemotron 3 sibling; 1M context; catalog listed neither `response_format` nor `structured_outputs`.
-2. `google/gemma-4-31b-it:free` — demoted from `MIXED_MODELS` `PROSECUTION_1` after both allowed attempts returned provider 429s in the 2026-08-27 deployed E2E. The ID remains a valid free catalog endpoint.
-3. `thinkingmachines/inkling-small:free` — smaller Inkling sibling; 1M context; prompt-enforced structure only.
-4. `nvidia/nemotron-3.5-lightning:free` — demoted from `MIXED_MODELS` `DEFENSE_1` after the second deployed E2E: attempt 1 `TIMEOUT`, attempt 2 `MALFORMED_JSON`. Prompt-enforced structure only. Not used automatically.
+1. `google/gemma-4-31b-it:free` — demoted from `MIXED_MODELS` `PROSECUTION_1` after both allowed attempts returned provider 429s in the 2026-08-27 deployed E2E. The ID remains a valid free catalog endpoint.
+2. `cohere/north-mini-code:free` — added on 2026-08-30 after the official catalog confirmed the exact zero-priced, direct model ID and a 256K context window. It exposes no structured-output parameter, so it uses `PROMPT_ONLY` plus JSON parse and Zod validation. It replaces `thinkingmachines/inkling-small:free`, which a deployed web Run proved is restricted to agentic harnesses and is therefore incompatible with Tribunal.
+3. `nvidia/nemotron-3.5-lightning:free` — demoted from `MIXED_MODELS` `DEFENSE_1` after the second deployed E2E: attempt 1 `TIMEOUT`, attempt 2 `MALFORMED_JSON`. Prompt-enforced structure only. Not used automatically.
+4. `inclusionai/ling-3.0-flash-fin:free` — added on 2026-08-30 after public catalog verification: exact zero-priced ID, 262,144-token context, and no `response_format`/`structured_outputs` capability (`PROMPT_ONLY`). It is a bounded recovery candidate, not an OpenRouter router or a primary seat.
+5. `z-ai/glm-5.2:free` — catalog-verified zero-priced 256K candidate with `JSON_SCHEMA`; previously rate-limited primary use remains historical availability evidence, not an automatic exclusion from a bounded recovery pool.
+6. `google/gemma-4-26b-a4b-it:free` — catalog-verified zero-priced 256K candidate with `JSON_OBJECT`; never used as an OpenRouter model router.
+7. `nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free` — catalog-verified zero-priced 256K candidate with `PROMPT_ONLY` output handling.
 
-`nvidia/nemotron-3-super-120b-a12b:free` remains a primary `MIXED_MODELS` `JUDGE_2` ID and is not a standby candidate. Standby IDs are classified `PROMPT_ONLY` from the same catalog snapshot.
+`nvidia/nemotron-3-super-120b-a12b:free` remains a primary `MIXED_MODELS` `JUDGE_2` ID and is not a standby candidate. Each standby's explicit output strategy is version-controlled in `lib/ai/configurations/output-modes.ts`.
 
-These are standby candidates only. They are **not** automatic runtime model fallbacks.
+These candidates are used only by the bounded `MIXED_MODELS` recovery coordinator after an eligible primary failure exhausts its two attempts. They are never passed to OpenRouter as a router/fallback array, and `SAME_MODEL` never substitutes a candidate.
 
 They exist because free-model availability is volatile. An unavailable primary model must not be silently replaced inside an already-defined Tribunal Run. The normal attempt/retry/failure policy applies. The standby pool is for an explicit future configuration change and a new execution. The new effective configuration must remain auditable.
 

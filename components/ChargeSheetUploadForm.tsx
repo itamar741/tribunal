@@ -77,43 +77,49 @@ export function ChargeSheetUploadForm() {
   return (
     <section
       aria-labelledby="charge-sheet-heading"
-      className="w-full max-w-xl border border-[var(--border)] bg-[var(--surface)] p-6"
+      className="parchment-panel w-full overflow-hidden p-6 sm:p-8"
     >
-      <h2 id="charge-sheet-heading" className="text-lg font-medium">
-        Charge sheet
+      <p className="text-[0.66rem] font-bold uppercase tracking-[0.18em] text-[var(--burgundy)]">
+        Primary petition
+      </p>
+      <h2 id="charge-sheet-heading" className="display-face mt-1 text-3xl font-bold">
+        Submit a charge sheet
       </h2>
-      <p className="mt-2 text-sm text-[var(--muted)]">
-        Upload one Markdown (.md) charge sheet, 1 MB or smaller. This is the
-        only input the Tribunal accepts.
+      <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--muted)]">
+        Upload one Markdown (.md) charge sheet, 1 MB or smaller. It is the only
+        evidence accepted into the Tribunal record.
       </p>
 
-      <form className="mt-6 space-y-4" onSubmit={onSubmit} noValidate>
-        <div>
+      <form className="mt-7 space-y-5" onSubmit={onSubmit} noValidate>
+        <div className="border border-dashed border-[#8c6938] bg-[#fff8df]/45 p-5 sm:p-6">
           <label className="block text-sm font-medium" htmlFor="charge-sheet">
-            Charge sheet file (.md)
+            Select the written charge (.md)
           </label>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            Valid UTF-8 text · maximum 1 MB
+          </p>
           <input
             id="charge-sheet"
             name="chargeSheet"
             type="file"
             accept=".md,text/markdown"
             disabled={busy}
-            className="mt-2 block w-full text-sm text-[var(--muted)] file:mr-3 file:border file:border-[var(--border)] file:bg-[var(--background)] file:px-3 file:py-1.5"
+            className="mt-4 block w-full text-sm text-[var(--muted)] file:mr-3 file:cursor-pointer file:border file:border-[#8c6938] file:bg-[#ead6a9] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#43291b]"
           />
         </div>
 
         <button
           type="submit"
           disabled={busy}
-          className="border border-[var(--foreground)] bg-[var(--foreground)] px-4 py-2 text-sm text-[var(--surface)] disabled:opacity-60"
+          className="court-button w-full px-5 py-2.5 text-sm font-bold uppercase tracking-[0.12em] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
-          {busy ? "Creating Case…" : "Create Case"}
+          {busy ? "Entering the record…" : "Create Case"}
         </button>
       </form>
 
       <div className="mt-4 min-h-6 text-sm" aria-live="polite">
         {state.status === "processing" ? (
-          <p className="text-[var(--muted)]">Validating charge sheet…</p>
+          <p className="text-[var(--muted)]">Validating the charge sheet…</p>
         ) : null}
         {state.status === "success" ? (
           <p>Case created: {state.caseId}. Opening the Case…</p>

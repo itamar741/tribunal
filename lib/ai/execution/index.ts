@@ -42,6 +42,8 @@ export type {
   JudgeRetryReport,
 } from "./execute-judge-with-retry";
 export { AttemptErrorType } from "./errors";
+export { FailureClassification, classifyFailure } from "./failure-classification";
+export type { FailureClassification as FailureClassificationType } from "./failure-classification";
 export { parseAdvocateResponse } from "./parse-advocate-response";
 export type { AdvocateParseResult } from "./parse-advocate-response";
 export { parseJudgeResponse } from "./parse-judge-response";

@@ -34,7 +34,7 @@ Completed and verified:
 - Instructor source dossier preserved as documentation/provenance at `docs/reference/tribunal-running-project-info-package.txt`. Runtime code does not import or read that file.
 - Seven instructor profiles version-controlled under `lib/ai/profiles/`: Jon Snow and Tyrion Lannister (defense), Daenerys Targaryen and Grey Worm (prosecution), and Aaron Barak, Menachem Elon, and Meir Shamgar (judges). Representative seats assign a procedural side only; the model reasons in character. Judge profiles are judicial-method simulations.
 - Provider-agnostic runtime prompt builders under `lib/ai/prompts/`: one representative builder and one judge builder. Trusted instructions/configuration are separated from untrusted charge-sheet and advocate content. Model IDs are not part of prompt construction.
-- Concrete OpenRouter model assignment under `lib/ai/configurations/`: one `SAME_MODEL` ID for all seven roles, seven distinct `MIXED_MODELS` IDs, and a standby pool that is not an automatic fallback. Canonical rationale: `docs/model-selection.md`.
+- Concrete OpenRouter model assignment under `lib/ai/configurations/`: one `SAME_MODEL` ID for all seven roles, seven distinct `MIXED_MODELS` IDs, and a fixed standby pool used only by the bounded, failure-classified `MIXED_MODELS` recovery path. Canonical rationale: `docs/model-selection.md`.
 - One-agent OpenRouter vertical slice: representative prompt → one Chat Completions attempt → JSON parse → Advocate Zod validation → one `model_calls` audit row.
 - Bounded two-attempt representative retry: centralized retryability, injectable delay / capped Retry-After, same identity on retry, separate audit rows. Does not complete or fail the Tribunal Run.
 - Parallel Advocate stage under `lib/tribunal`: four representatives start concurrently, each with its own bounded retry. The stage succeeds only with four valid Advocate responses. One permanent failure marks that Tribunal Run `FAILED` and blocks judges.
@@ -385,7 +385,7 @@ Completed: `POST /api/cases/[id]/execute` and `GET /api/cases/[id]/results`. Exe
 
 ## Reviewer UI
 
-Completed: upload → start Tribunal → wait for the synchronous execute request → `GET` persisted results. The two Runs are shown independently. Known Cases reopen at `/cases/[id]` without executing models.
+Completed: upload → start Tribunal → wait for the synchronous execute request while the browser reads persisted results every three seconds. The two Runs are shown independently as completed seats are saved. Known Cases reopen at `/cases/[id]` without executing models.
 
 ## Deployment preflight
 
@@ -676,4 +676,6 @@ Intentionally not implemented. Do not treat these as unfinished MVP phases:
 - A recorded generic Markdown charge-sheet structural grammar
 - A human-recorded final verdict or approval decision
 - Analytics dashboards, full-text history search, and exports
+- Visual polish: remove the subtle pale-pink halo around the approved silver Judge throne asset; it is faintly visible against light parchment/card surfaces.
+- Parchment cleanup: replace or repair the parchment panel asset because its checkerboard transparency preview is baked into the image and visibly appears behind the Judges section. Export/use a clean parchment asset with genuine transparency or a deliberate opaque parchment background.
 - Scaling infrastructure without measured need

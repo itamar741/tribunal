@@ -14,6 +14,7 @@ export const TRIBUNAL_RUN_COLUMNS = `
   started_at,
   completed_at,
   failure_reason,
+  recovery_cycle,
   created_at
 `;
 
@@ -26,6 +27,7 @@ export type RunRow = {
   started_at: Date | null;
   completed_at: Date | null;
   failure_reason: string | null;
+  recovery_cycle: number;
   created_at: Date;
 };
 
@@ -60,6 +62,7 @@ export function toRun(row: RunRow): TribunalRunRecord {
     startedAt: row.started_at,
     completedAt: row.completed_at,
     failureReason: row.failure_reason,
+    recoveryCycle: row.recovery_cycle,
     createdAt: row.created_at,
   };
 }

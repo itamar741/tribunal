@@ -15,11 +15,13 @@ import {
   ModelCallStage,
   ModelCallStatus,
   type ModelCallAttempt,
+  ModelCallSource,
   type ModelCallRecord,
   type ModelCallRepository,
 } from "../../model-calls";
 import type { ChatCompletionsPort } from "./execute-representative-attempt";
 import { outputStrategyForModel } from "./output-strategy";
+import { classifyFailure } from "./failure-classification";
 import { parseJudgeResponse } from "./parse-judge-response";
 
 export type ExecuteJudgeAttemptInput = {
@@ -30,6 +32,9 @@ export type ExecuteJudgeAttemptInput = {
   chargeSheetMarkdown: string;
   advocateResponses: JudgeAdvocateResponses;
   attempt?: ModelCallAttempt;
+  model?: string;
+  modelSource?: ModelCallSource;
+  recoveryCycle?: number;
   includeOutputContractCorrection?: boolean;
   apiKey: string;
 };
@@ -85,7 +90,9 @@ export async function executeJudgeAttempt(
 ): Promise<JudgeAttemptResult> {
   const role = requireJudgeRole(input.role);
   const attempt = requireAttempt(input.attempt);
-  const model = getModelIdForRole(input.runKind, role);
+  const model = input.model ?? getModelIdForRole(input.runKind, role);
+  const modelSource = input.modelSource ?? ModelCallSource.PRIMARY;
+  const recoveryCycle = input.recoveryCycle ?? 1;
   const prompt = buildJudgePrompt({
     role,
     chargeSheetMarkdown: input.chargeSheetMarkdown,
@@ -151,6 +158,8 @@ export async function executeJudgeAttempt(
     agentRole: toAgentRole(role),
     attempt,
     model,
+    modelSource,
+    recoveryCycle,
     status,
     inputTokens: transport.usage.promptTokens,
     outputTokens: transport.usage.completionTokens,
@@ -163,6 +172,7 @@ export async function executeJudgeAttempt(
     validatedResponse,
     errorType,
     errorMessage,
+    failureClassification: failure ? classifyFailure({ errorType: failure.errorType, httpStatus: failure.httpStatus }).classification : null,
   });
 
   return {

@@ -9,8 +9,8 @@ export function AccountingSummary({
   totals: UsageTotalsView;
 }) {
   return (
-    <section className="border border-[var(--border)] bg-[var(--surface)] p-4">
-      <h3 className="text-sm font-semibold">{title}</h3>
+    <section className="technical-card p-4">
+      <h3 className="display-face text-lg font-bold">{title}</h3>
       <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
         <div>
           <dt className="text-[var(--muted)]">Attempts</dt>

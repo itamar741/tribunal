@@ -24,6 +24,7 @@ export class InMemoryCaseRepository implements CaseRepository {
           startedAt: null,
           completedAt: null,
           failureReason: null,
+          recoveryCycle: 0,
           createdAt,
         })),
       ),

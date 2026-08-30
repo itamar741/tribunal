@@ -11,32 +11,35 @@ export function AdvocateCard({
   const { characterName, side } = REPRESENTATIVE_DISPLAY[role];
   const sideClass =
     side === "Defense"
-      ? "border-l-[var(--defense)]"
-      : "border-l-[var(--prosecution)]";
+      ? ""
+      : "advocate-card-prosecution";
 
   return (
     <article
-      className={`border border-[var(--border)] border-l-4 bg-[var(--surface)] p-4 ${sideClass}`}
+      className={`advocate-card p-4 ${sideClass}`}
     >
       <header>
-        <h4 className="text-base font-semibold">{characterName}</h4>
-        <p className="text-sm text-[var(--muted)]">
+        <h4 className="display-face text-lg font-bold">{characterName}</h4>
+        <p className="mt-0.5 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
           {side} · {role}
         </p>
       </header>
       {response ? (
-        <div className="mt-3 space-y-3 text-sm leading-relaxed">
-          <p>{response.summary}</p>
-          <ol className="list-decimal space-y-3 pl-5">
+        <div className="mt-4 space-y-4 text-sm leading-6">
+          <p className="font-medium italic">{response.summary}</p>
+          <ol className="space-y-3">
             {response.arguments.map((item, index) => (
-              <li key={`${index}-${item.title}`}>
-                <p className="font-medium">{item.title}</p>
+              <li key={`${index}-${item.title}`} className="border-t border-[#b69b70] pt-3">
+                <p className="font-semibold text-[var(--burgundy)]">
+                  <span className="mr-2 text-xs text-[#9a7436]">{index + 1}.</span>
+                  {item.title}
+                </p>
                 <p className="mt-1">{item.argument}</p>
               </li>
             ))}
           </ol>
-          <p>
-            <span className="font-medium">Conclusion. </span>
+          <p className="border-t border-[#b69b70] pt-3">
+            <span className="font-semibold">Conclusion. </span>
             {response.conclusion}
           </p>
         </div>

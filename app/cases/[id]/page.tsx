@@ -13,21 +13,17 @@ export default async function CasePage({
   return (
     <div className="flex flex-1 flex-col">
       <AppHeader detail={valid ? `Case ${id}` : "Invalid Case"} />
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Case results</h1>
-          {valid ? (
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Persisted SAME_MODEL and MIXED_MODELS outcomes. Reloading this
-              page reads stored results and does not execute models.
-            </p>
-          ) : (
-            <p role="alert" className="mt-2 text-sm text-red-800">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-5 px-5 py-8 sm:px-8 sm:py-10">
+        {valid ? <CaseWorkspace key={id} caseId={id} /> : null}
+        {!valid ? (
+          <div className="stone-panel px-5 py-5 sm:px-7">
+            <p className="eyebrow">Tribunal chamber</p>
+            <h1 className="display-face mt-1 text-3xl font-bold tracking-tight text-[#f0dbab]">Case results</h1>
+            <p role="alert" className="mt-2 text-sm text-[#f3a7a7]">
               The Case ID is not valid.
             </p>
-          )}
-        </div>
-        {valid ? <CaseWorkspace key={id} caseId={id} /> : null}
+          </div>
+        ) : null}
       </main>
     </div>
   );

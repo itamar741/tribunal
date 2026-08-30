@@ -1,5 +1,6 @@
 import type { TribunalRunKind } from "../ai/configurations";
 import type { JudgeResponse } from "../ai/contracts";
+import type { AdvocateResponse } from "../ai/contracts";
 import type { JudgeRole, RepresentativeRole } from "../ai/profiles";
 import type { JudgeAdvocateResponses } from "../ai/prompts";
 import type { TribunalRunVerdict } from "../cases";
@@ -21,6 +22,10 @@ export type ExecuteTribunalRunInput = {
   runKind: TribunalRunKind;
   chargeSheetMarkdown: string;
   apiKey: string;
+  recoveryCycle?: number;
+  skipMarkRunning?: boolean;
+  existingAdvocates?: Partial<Record<RepresentativeRole, AdvocateResponse>>;
+  existingJudges?: Partial<Record<JudgeRole, JudgeResponse>>;
 };
 
 export type TribunalRunRepositoryPort = ExecuteAdvocateStageDeps["runs"] & {
@@ -88,7 +93,16 @@ export async function executeTribunalRun(
   input: ExecuteTribunalRunInput,
   deps: ExecuteTribunalRunDeps,
 ): Promise<TribunalRunResult> {
-  const advocates = await executeAdvocateStage(input, deps);
+  const persistedCalls = await deps.modelCalls.listByRunId(input.runId);
+  const priorFallbackModels = persistedCalls
+    .filter((call) => call.modelSource === "FALLBACK")
+    .map((call) => call.model);
+  const advocates = await executeAdvocateStage({
+    ...input,
+    existingResponses: input.existingAdvocates,
+    skipMarkRunning: input.skipMarkRunning,
+    activeFallbackModels: priorFallbackModels,
+  }, deps);
   if (!advocates.ok) {
     if (advocates.rejectedStart) {
       return {
@@ -116,6 +130,14 @@ export async function executeTribunalRun(
       chargeSheetMarkdown: input.chargeSheetMarkdown,
       advocateResponses: advocates.responses,
       apiKey: input.apiKey,
+      recoveryCycle: input.recoveryCycle,
+      existingJudges: input.existingJudges,
+      activeFallbackModels: [
+        ...priorFallbackModels,
+        ...Object.values(advocates.agents)
+          .filter((agent) => agent.fallbackUsed)
+          .map((agent) => agent.model),
+      ],
     },
     deps,
   );

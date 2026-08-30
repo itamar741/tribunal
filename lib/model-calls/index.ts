@@ -8,9 +8,11 @@ export {
   ModelCallAgentRole,
   ModelCallStage,
   ModelCallStatus,
+  ModelCallSource,
 } from "./types";
 export type {
   ModelCallAttempt,
+  ModelCallSource as ModelCallSourceType,
   ModelCallRecord,
   ModelCallRepository,
   NewModelCallInput,

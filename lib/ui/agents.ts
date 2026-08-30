@@ -23,10 +23,22 @@ export const REPRESENTATIVE_DISPLAY: Record<
   PROSECUTION_2: { characterName: "Grey Worm", side: "Prosecution" },
 };
 
-export const JUDGE_DISPLAY: Record<JudgeRoleView, { characterName: string }> = {
-  JUDGE_1: { characterName: "Aaron Barak" },
-  JUDGE_2: { characterName: "Menachem Elon" },
-  JUDGE_3: { characterName: "Meir Shamgar" },
+export const JUDGE_DISPLAY: Record<
+  JudgeRoleView,
+  { characterName: string; throneAsset: string }
+> = {
+  JUDGE_1: {
+    characterName: "Aaron Barak",
+    throneAsset: "/assets/judges/throne-gold.png",
+  },
+  JUDGE_2: {
+    characterName: "Menachem Elon",
+    throneAsset: "/assets/judges/throne-silver.png",
+  },
+  JUDGE_3: {
+    characterName: "Meir Shamgar",
+    throneAsset: "/assets/judges/throne-bronze.png",
+  },
 };
 
 export const JUDGE_SIMULATION_NOTE =

@@ -3,6 +3,7 @@ import {
   ModelCallAgentRole,
   ModelCallStage,
   ModelCallStatus,
+  ModelCallSource,
   type ModelCallRecord,
   type ModelCallRepository,
   type NewModelCallInput,
@@ -16,6 +17,8 @@ type ModelCallRow = {
   agent_role: string;
   attempt: number;
   model: string;
+  model_source: string;
+  recovery_cycle: number;
   status: string;
   input_tokens: number | null;
   output_tokens: number | null;
@@ -28,6 +31,7 @@ type ModelCallRow = {
   validated_response: unknown;
   error_type: string | null;
   error_message: string | null;
+  failure_classification: string | null;
   created_at: Date;
 };
 
@@ -39,6 +43,8 @@ const MODEL_CALL_COLUMNS = `
   agent_role,
   attempt,
   model,
+  model_source,
+  recovery_cycle,
   status,
   input_tokens,
   output_tokens,
@@ -51,6 +57,7 @@ const MODEL_CALL_COLUMNS = `
   validated_response,
   error_type,
   error_message,
+  failure_classification,
   created_at
 `;
 
@@ -69,6 +76,12 @@ const MODEL_CALL_ORDER = `
     when 'JUDGE_2' then 5
     when 'JUDGE_3' then 6
     else 7
+  end,
+  recovery_cycle,
+  case model_source
+    when 'PRIMARY' then 0
+    when 'FALLBACK' then 1
+    else 2
   end,
   attempt,
   created_at,
@@ -91,6 +104,10 @@ function isModelCallStatus(value: string): value is ModelCallRecord["status"] {
   return Object.values(ModelCallStatus).includes(
     value as ModelCallRecord["status"],
   );
+}
+
+function isModelCallSource(value: string): value is ModelCallSource {
+  return Object.values(ModelCallSource).includes(value as ModelCallSource);
 }
 
 function isModelCallAttempt(
@@ -122,6 +139,9 @@ function toRecord(row: ModelCallRow): ModelCallRecord {
   if (!isModelCallStatus(row.status)) {
     throw new Error(`Unexpected Model Call status: ${row.status}`);
   }
+  if (!isModelCallSource(row.model_source) || row.recovery_cycle < 1) {
+    throw new Error("Unexpected Model Call recovery provenance.");
+  }
 
   return {
     id: row.id,
@@ -131,6 +151,8 @@ function toRecord(row: ModelCallRow): ModelCallRecord {
     agentRole: row.agent_role,
     attempt: row.attempt,
     model: row.model,
+    modelSource: row.model_source,
+    recoveryCycle: row.recovery_cycle,
     status: row.status,
     inputTokens: row.input_tokens,
     outputTokens: row.output_tokens,
@@ -143,6 +165,7 @@ function toRecord(row: ModelCallRow): ModelCallRecord {
     validatedResponse: row.validated_response,
     errorType: row.error_type,
     errorMessage: row.error_message,
+    failureClassification: row.failure_classification,
     createdAt: row.created_at,
   };
 }
@@ -159,6 +182,8 @@ export class PostgresModelCallRepository implements ModelCallRepository {
             agent_role,
             attempt,
             model,
+            model_source,
+            recovery_cycle,
             status,
             input_tokens,
             output_tokens,
@@ -170,12 +195,13 @@ export class PostgresModelCallRepository implements ModelCallRepository {
             provider_call_id,
             validated_response,
             error_type,
-            error_message
+            error_message,
+            failure_classification
           )
           values (
-            $1, $2, $3, $4, $5, $6, $7,
-            $8, $9, $10, $11, $12, $13,
-            $14, $15, $16, $17, $18
+            $1, $2, $3, $4, $5, $6, $7, $8, $9,
+            $10, $11, $12, $13, $14, $15,
+            $16, $17, $18, $19, $20, $21
           )
           returning ${MODEL_CALL_COLUMNS}
         `,
@@ -186,6 +212,8 @@ export class PostgresModelCallRepository implements ModelCallRepository {
           input.agentRole,
           input.attempt,
           input.model,
+          input.modelSource ?? ModelCallSource.PRIMARY,
+          input.recoveryCycle ?? 1,
           input.status,
           input.inputTokens,
           input.outputTokens,
@@ -198,6 +226,7 @@ export class PostgresModelCallRepository implements ModelCallRepository {
           input.validatedResponse,
           input.errorType,
           input.errorMessage,
+          input.failureClassification ?? null,
         ],
       );
       const row = result.rows[0];

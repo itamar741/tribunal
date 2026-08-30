@@ -1,12 +1,13 @@
-import { AttemptErrorType } from "../ai/execution";
+import { AttemptErrorType, classifyFailure } from "../ai/execution";
 import {
   executeJudgeWithRetry,
   type ExecuteJudgeWithRetryDeps,
   type JudgeExecutionResult,
 } from "../ai/execution";
-import type { TribunalRunKind } from "../ai/configurations";
+import { getModelIdForRole, mayUseFallback, selectMixedFallbackModel, type TribunalRunKind } from "../ai/configurations";
+import { ModelCallSource } from "../model-calls";
 import type { JudgeResponse } from "../ai/contracts";
-import { JUDGE_ROLES_IN_ORDER, JudgeRole } from "../ai/profiles";
+import { JUDGE_ROLES_IN_ORDER, JudgeRole, TribunalAgentRole } from "../ai/profiles";
 import { buildJudgePrompt, type JudgeAdvocateResponses } from "../ai/prompts";
 import type { TribunalRunVerdict } from "../cases";
 import { calculateMajority } from "./majority";
@@ -18,6 +19,9 @@ export type ExecuteJudgeStageInput = {
   chargeSheetMarkdown: string;
   advocateResponses: JudgeAdvocateResponses;
   apiKey: string;
+  recoveryCycle?: number;
+  existingJudges?: Partial<Record<JudgeRole, JudgeResponse>>;
+  activeFallbackModels?: readonly string[];
 };
 
 export type JudgeStageRunRepository = {
@@ -35,6 +39,7 @@ export type ExecuteJudgeStageDeps = ExecuteJudgeWithRetryDeps & {
 export type JudgeStageAgentMeta = {
   successfulAttempt: 1 | 2;
   model: string;
+  fallbackUsed?: boolean;
 };
 
 export type JudgeStageSuccess = {
@@ -53,6 +58,8 @@ export type JudgeStageAgentFailure = {
   errorType: string;
   errorMessage: string;
   attemptsMade: 0 | 1 | 2;
+  classification?: string;
+  fallbackEligible?: boolean;
 };
 
 export type JudgeStageFailure = {
@@ -92,6 +99,7 @@ function failureFromResult(
     errorType: result.errorType,
     errorMessage: result.errorMessage,
     attemptsMade: result.attemptsMade,
+    ...classifyFailure({ errorType: result.errorType, httpStatus: result.attempts.at(-1)?.failure?.httpStatus ?? null }),
   };
 }
 
@@ -182,7 +190,7 @@ export async function executeJudgeStage(
   const { runs, ...judgeDeps } = deps;
 
   const settled = await Promise.allSettled(
-    JUDGE_ROLES_IN_ORDER.map((role) =>
+    JUDGE_ROLES_IN_ORDER.filter((role) => !input.existingJudges?.[role]).map((role) =>
       executeJudgeWithRetry(
         {
           caseId: input.caseId,
@@ -192,6 +200,7 @@ export async function executeJudgeStage(
           chargeSheetMarkdown: input.chargeSheetMarkdown,
           advocateResponses: input.advocateResponses,
           apiKey: input.apiKey,
+          recoveryCycle: input.recoveryCycle ?? 1,
         },
         judgeDeps,
       ),
@@ -199,11 +208,15 @@ export async function executeJudgeStage(
   );
 
   const failures: JudgeStageAgentFailure[] = [];
-  const judges: Partial<Record<JudgeRole, JudgeResponse>> = {};
+  const judges: Partial<Record<JudgeRole, JudgeResponse>> = { ...input.existingJudges };
   const agents: Partial<Record<JudgeRole, JudgeStageAgentMeta>> = {};
+  for (const role of JUDGE_ROLES_IN_ORDER) {
+    if (judges[role]) agents[role] = { successfulAttempt: 1, model: "persisted", fallbackUsed: false };
+  }
 
+  const unresolvedRoles = JUDGE_ROLES_IN_ORDER.filter((role) => !input.existingJudges?.[role]);
   for (const [index, outcome] of settled.entries()) {
-    const role = JUDGE_ROLES_IN_ORDER[index];
+    const role = unresolvedRoles[index];
     if (!isJudgeRoleValue(role)) {
       continue;
     }
@@ -220,7 +233,34 @@ export async function executeJudgeStage(
     agents[role] = {
       successfulAttempt: result.successfulAttempt,
       model: result.model,
+      fallbackUsed: false,
     };
+  }
+
+  if (failures.length > 0 && mayUseFallback(input.runKind)) {
+    const activeModels: Set<string> = new Set(Object.values(TribunalAgentRole).map((role) => getModelIdForRole(input.runKind, role)));
+    for (const model of input.activeFallbackModels ?? []) activeModels.add(model);
+    for (const failure of [...failures]) {
+      if (!failure.fallbackEligible) continue;
+      const fallbackModel = selectMixedFallbackModel(failure.role, [...activeModels]);
+      if (!fallbackModel) continue;
+      activeModels.add(fallbackModel);
+      const recovered = await executeJudgeWithRetry({
+        caseId: input.caseId, runId: input.runId, runKind: input.runKind,
+        role: failure.role, chargeSheetMarkdown: input.chargeSheetMarkdown,
+        advocateResponses: input.advocateResponses, apiKey: input.apiKey,
+        model: fallbackModel, modelSource: ModelCallSource.FALLBACK,
+        recoveryCycle: input.recoveryCycle ?? 1,
+      }, judgeDeps);
+      const index = failures.indexOf(failure);
+      if (recovered.ok) {
+        judges[failure.role] = recovered.response;
+        agents[failure.role] = { successfulAttempt: recovered.successfulAttempt, model: recovered.model, fallbackUsed: true };
+        failures.splice(index, 1);
+      } else {
+        failures[index] = failureFromResult(failure.role, recovered);
+      }
+    }
   }
 
   if (failures.length === 0) {

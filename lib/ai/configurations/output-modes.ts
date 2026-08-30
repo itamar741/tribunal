@@ -28,11 +28,14 @@ export const MODEL_OUTPUT_MODES = {
   "nvidia/nemotron-3-super-120b-a12b:free": ModelOutputMode.JSON_SCHEMA,
   "minimax/minimax-m2.7:free": ModelOutputMode.JSON_OBJECT,
   "google/gemma-4-31b-it:free": ModelOutputMode.JSON_OBJECT,
+  "cohere/north-mini-code:free": ModelOutputMode.PROMPT_ONLY,
   "minimax/minimax-m3:free": ModelOutputMode.JSON_OBJECT,
   "nvidia/nemotron-3.5-lightning:free": ModelOutputMode.PROMPT_ONLY,
   "nvidia/nemotron-3-ultra-550b-a55b:free": ModelOutputMode.PROMPT_ONLY,
-  "poolside/laguna-s-2.1:free": ModelOutputMode.PROMPT_ONLY,
-  "thinkingmachines/inkling-small:free": ModelOutputMode.PROMPT_ONLY,
+  "inclusionai/ling-3.0-flash-fin:free": ModelOutputMode.PROMPT_ONLY,
+  "z-ai/glm-5.2:free": ModelOutputMode.JSON_SCHEMA,
+  "google/gemma-4-26b-a4b-it:free": ModelOutputMode.JSON_OBJECT,
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free": ModelOutputMode.PROMPT_ONLY,
 } as const satisfies Record<string, ModelOutputMode>;
 
 export function listConfiguredModelIds(): readonly OpenRouterModelId[] {

@@ -121,7 +121,7 @@ A fresh Case was created from `fixtures/charge-sheets/t-001-the-realm-v-jon-snow
 
 `SAME_MODEL` used `minimax/minimax-m3:free` for all seven roles. All four Advocates and all three Judges completed. One Judge required a retry after an upstream 429. The majority persisted as `NOT_JUSTIFIED`.
 
-`MIXED_MODELS` used the current paid/free assignment (`openai/gpt-4.1-mini`, `minimax/minimax-m2.7:free`, `poolside/laguna-s-2.1:free`, `minimax/minimax-m3:free`, `openai/gpt-4.1`, `nvidia/nemotron-3-super-120b-a12b:free`, `meta-llama/llama-4-maverick`). All four Advocates eventually succeeded (`PROSECUTION_1` retried after malformed JSON). All three Judges succeeded. The majority persisted as `NOT_JUSTIFIED`.
+`MIXED_MODELS` used the then-current paid/free assignment (`openai/gpt-4.1-mini`, `minimax/minimax-m2.7:free`, `poolside/laguna-s-2.1:free`, `minimax/minimax-m3:free`, `openai/gpt-4.1`, `nvidia/nemotron-3-super-120b-a12b:free`, `meta-llama/llama-4-maverick`). All four Advocates eventually succeeded (`PROSECUTION_1` retried after malformed JSON). All three Judges succeeded. The majority persisted as `NOT_JUSTIFIED`.
 
 Persisted MIXED accounting: 8 attempts; 19,426 input / 9,088 output / 28,514 total tokens; provider-reported cost `$0.012415312`; duration 162,798 ms. Paid Model Call costs were GPT-4.1 Mini `$0.0007884`, GPT-4.1 `$0.010658`, and Llama 4 Maverick `$0.000968912`. Free endpoints reported `$0`.
 

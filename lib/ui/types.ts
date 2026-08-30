@@ -53,6 +53,10 @@ export type ModelCallAttemptView = {
   agentRole: AgentRoleView;
   attempt: 1 | 2;
   model: string;
+  modelSource: "PRIMARY" | "FALLBACK";
+  recoveryCycle: number;
+  failureClassification: string | null;
+  fallbackEligible: boolean;
   status: "SUCCEEDED" | "FAILED";
   inputTokens: number | null;
   outputTokens: number | null;
@@ -83,6 +87,8 @@ export type RunResultsView = {
   status: "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
   finalVerdict: "JUSTIFIED" | "NOT_JUSTIFIED" | null;
   failureReason: string | null;
+  recoveryCycle?: number;
+  fallbackUsed?: boolean;
   startedAt: string | null;
   completedAt: string | null;
   advocates: {
