@@ -898,11 +898,11 @@ summary {
   }
   50% {
     opacity: 1;
-    transform: translate(-50%, 0.24rem) rotate(0deg) scaleX(1.06) scaleY(0.9);
+    transform: translate(-50%, -0.35rem) rotate(0deg) scaleX(1.06) scaleY(0.9);
   }
   58% {
     opacity: 1;
-    transform: translate(-50%, -0.08rem) rotate(0deg) scaleX(0.98) scaleY(1.02);
+    transform: translate(-50%, -0.62rem) rotate(0deg) scaleX(0.98) scaleY(1.02);
   }
   100% {
     opacity: 0;
