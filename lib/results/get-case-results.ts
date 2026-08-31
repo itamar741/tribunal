@@ -1,4 +1,4 @@
-import { TribunalRunKind } from "../ai/configurations";
+import { getModelIdForRole, TribunalRunKind } from "../ai/configurations";
 import {
   advocateResponseSchema,
   judgeResponseSchema,
@@ -13,7 +13,7 @@ import {
   type TribunalRunRecord,
 } from "../cases";
 import { hasRequiredRunKinds } from "../cases";
-import { DatabaseConfigError } from "../db";
+import { isDatabaseUnavailableError } from "../db";
 import {
   ModelCallAgentRole,
   ModelCallStage,
@@ -263,6 +263,12 @@ function reconstructRun(
       failureReason: run.failureReason,
       recoveryCycle: run.recoveryCycle,
       fallbackUsed: rows.some((row) => row.modelSource === "FALLBACK"),
+      modelAssignments: Object.fromEntries(
+        AGENT_ROLES_IN_ORDER.map((role) => [
+          role,
+          getModelIdForRole(run.runType, role),
+        ]),
+      ) as RunResults["modelAssignments"],
       startedAt: run.startedAt,
       completedAt: run.completedAt,
       advocates,
@@ -285,7 +291,7 @@ export async function getCaseResults(
   try {
     record = await deps.cases.getById(input.caseId);
   } catch (error) {
-    if (error instanceof DatabaseConfigError) {
+    if (isDatabaseUnavailableError(error)) {
       throw error;
     }
     return {

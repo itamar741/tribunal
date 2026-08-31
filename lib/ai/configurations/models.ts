@@ -32,6 +32,8 @@ export const EXPLICITLY_PAID_MODEL_IDS = [
   "openai/gpt-4.1-mini",
   "openai/gpt-4.1",
   "meta-llama/llama-4-maverick",
+  "mistralai/mistral-small-3.2-24b-instruct",
+  "qwen/qwen3-30b-a3b-instruct-2507",
 ] as const;
 
 export function isExplicitlyPaidModelId(modelId: string): boolean {
@@ -40,8 +42,8 @@ export function isExplicitlyPaidModelId(modelId: string): boolean {
 
 export const MIXED_MODELS_BY_ROLE = {
   [TribunalAgentRole.DEFENSE_1]: "openai/gpt-4.1-mini",
-  [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
-  [TribunalAgentRole.PROSECUTION_1]: "nvidia/nemotron-3-ultra-550b-a55b:free",
+  [TribunalAgentRole.DEFENSE_2]: "mistralai/mistral-small-3.2-24b-instruct",
+  [TribunalAgentRole.PROSECUTION_1]: "qwen/qwen3-30b-a3b-instruct-2507",
   [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
   [TribunalAgentRole.JUDGE_1]: "openai/gpt-4.1",
   [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",

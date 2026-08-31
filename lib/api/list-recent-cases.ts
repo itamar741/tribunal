@@ -1,4 +1,4 @@
-import { DatabaseConfigError } from "../db";
+import { isDatabaseUnavailableError } from "../db";
 import {
   listRecentExecutedCases,
   type ListRecentExecutedCasesDeps,
@@ -55,8 +55,8 @@ export async function handleListRecentCases(
       },
     };
   } catch (error) {
-    if (error instanceof DatabaseConfigError) {
-      return apiError(503, "DATABASE_UNAVAILABLE", error.message);
+    if (isDatabaseUnavailableError(error)) {
+      return apiError(503, "DATABASE_UNAVAILABLE", "The database is unavailable.");
     }
     return internalError();
   }

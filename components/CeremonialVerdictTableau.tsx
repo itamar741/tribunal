@@ -55,6 +55,8 @@ export function CeremonialVerdictTableau({ run }: { run: RunResultsView }) {
               key={role}
               role={role}
               response={run.judges[role]}
+              model={run.modelAssignments?.[role] ?? "Recorded model"}
+              executionState="SUCCEEDED"
               presentation="seat"
             />
           ))}

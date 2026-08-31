@@ -23,6 +23,7 @@ import type { ChatCompletionsPort } from "./execute-representative-attempt";
 import { outputStrategyForModel } from "./output-strategy";
 import { classifyFailure } from "./failure-classification";
 import { parseJudgeResponse } from "./parse-judge-response";
+import type { ModelProgressListener } from "../../tribunal/model-progress";
 
 export type ExecuteJudgeAttemptInput = {
   caseId: string;
@@ -45,6 +46,7 @@ export type ExecuteJudgeAttemptDeps = {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   now?: () => number;
+  onProgress?: ModelProgressListener;
 };
 
 export type JudgeAttemptFailure = {
@@ -101,6 +103,17 @@ export async function executeJudgeAttempt(
   });
 
   const complete = deps.completeChat ?? completeChat;
+  const progress = {
+    runId: input.runId,
+    runKind: input.runKind,
+    role: toAgentRole(role),
+    stage: ModelCallStage.JUDGES,
+    model,
+    attempt,
+    modelSource,
+    recoveryCycle,
+  } as const;
+  deps.onProgress?.({ type: "attempt_started", ...progress });
   const transport: OpenRouterChatCompletionResult = await complete(
     {
       model,
@@ -115,6 +128,7 @@ export async function executeJudgeAttempt(
       fetchImpl: deps.fetchImpl,
       timeoutMs: deps.timeoutMs,
       now: deps.now,
+      onDelta: (delta) => deps.onProgress?.({ type: "draft_delta", ...progress, delta }),
     },
   );
 
@@ -174,6 +188,12 @@ export async function executeJudgeAttempt(
     errorMessage,
     failureClassification: failure ? classifyFailure({ errorType: failure.errorType, httpStatus: failure.httpStatus }).classification : null,
   });
+
+  deps.onProgress?.(
+    validatedResponse
+      ? { type: "attempt_succeeded", ...progress }
+      : { type: "attempt_failed", ...progress, errorType: errorType ?? "UNKNOWN" },
+  );
 
   return {
     record,

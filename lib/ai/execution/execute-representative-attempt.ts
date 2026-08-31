@@ -26,6 +26,7 @@ import {
 import { outputStrategyForModel } from "./output-strategy";
 import { classifyFailure } from "./failure-classification";
 import { parseAdvocateResponse } from "./parse-advocate-response";
+import type { ModelProgressListener } from "../../tribunal/model-progress";
 
 export type ChatCompletionsPort = (
   input: OpenRouterChatCompletionInput,
@@ -59,6 +60,7 @@ export type ExecuteRepresentativeAttemptDeps = {
   now?: () => number;
   /** When true, the caller owns marking the Tribunal Run RUNNING. */
   skipMarkRunning?: boolean;
+  onProgress?: ModelProgressListener;
 };
 
 export type RepresentativeAttemptFailure = {
@@ -114,6 +116,17 @@ export async function executeRepresentativeAttempt(
   }
 
   const complete = deps.completeChat ?? completeChat;
+  const progress = {
+    runId: input.runId,
+    runKind: input.runKind,
+    role: toAgentRole(role),
+    stage: ModelCallStage.ADVOCATES,
+    model,
+    attempt,
+    modelSource,
+    recoveryCycle,
+  } as const;
+  deps.onProgress?.({ type: "attempt_started", ...progress });
   const transport = await complete(
     {
       model,
@@ -128,6 +141,7 @@ export async function executeRepresentativeAttempt(
       fetchImpl: deps.fetchImpl,
       timeoutMs: deps.timeoutMs,
       now: deps.now,
+      onDelta: (delta) => deps.onProgress?.({ type: "draft_delta", ...progress, delta }),
     },
   );
 
@@ -187,6 +201,12 @@ export async function executeRepresentativeAttempt(
     errorMessage,
     failureClassification: failure ? classifyFailure({ errorType: failure.errorType, httpStatus: failure.httpStatus }).classification : null,
   });
+
+  deps.onProgress?.(
+    validatedResponse
+      ? { type: "attempt_succeeded", ...progress }
+      : { type: "attempt_failed", ...progress, errorType: errorType ?? "UNKNOWN" },
+  );
 
   return {
     record,

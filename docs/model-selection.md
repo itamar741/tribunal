@@ -2,7 +2,7 @@
 
 This is the canonical rationale for the version-controlled OpenRouter model assignment. Runtime IDs live in `lib/ai/configurations/`. Profiles, prompt builders, response contracts, and UI do not contain model IDs.
 
-The current selection is **no longer all-free**. SAME_MODEL and four MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1`, `JUDGE_1`, and `JUDGE_3` are explicitly paid IDs. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
+The current selection is **no longer all-free**. SAME_MODEL and two MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1`, `DEFENSE_2`, `PROSECUTION_1`, `JUDGE_1`, and `JUDGE_3` are explicitly paid IDs. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
 
 The accepted production dual-run E2E used this configuration. Both Runs succeeded and persisted `NOT_JUSTIFIED`. Paid MIXED seats exist for reliability, not because the Tribunal requires paid inference. Availability and listed prices remain operational configuration and must be revalidated against `GET /api/v1/models` before a later change.
 
@@ -30,7 +30,7 @@ The current IDs below were revalidated against the live `/api/v1/models` catalog
 ## Selection constraints
 
 - **OpenRouter is the AI gateway.** All model calls go through OpenRouter.
-- **Model configuration may contain paid endpoints.** Concrete IDs, output capabilities, and current pricing must be explicitly documented and catalog-verified. Free-configured IDs must still list zero prompt and completion prices. The current paid primaries are `openai/gpt-4.1-mini`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`.
+- **Model configuration may contain paid endpoints.** Concrete IDs, output capabilities, and current pricing must be explicitly documented and catalog-verified. Free-configured IDs must still list zero prompt and completion prices. The current paid primaries are `openai/gpt-4.1-mini`, `mistralai/mistral-small-3.2-24b-instruct`, `qwen/qwen3-30b-a3b-instruct-2507`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`.
 - **Concrete model IDs are required** for reproducibility and audit. Each configured seat must name a specific OpenRouter model identity.
 - **`openrouter/free` is inappropriate.** That router may choose different models dynamically. A Tribunal Run cannot treat a randomly selected model as a stable experimental condition.
 - **Adequate context length is required.** A run later sends the charge sheet, role/profile instructions, the response contract, and — for judges — four validated advocate outputs. The selected windows are larger than those current Tribunal inputs.
@@ -111,8 +111,8 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 | Tribunal role | Concrete model ID | Provider / family | Free | Context size | Structured-output level | Selection rationale / tradeoff |
 | --- | --- | --- | --- | --- | --- | --- |
 | `DEFENSE_1` | `openai/gpt-4.1-mini` | OpenAI GPT-4.1 Mini | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces paid GPT-OSS after two deployed completions with null assistant content and mandatory reasoning. Conventional text output; catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
-| `DEFENSE_2` | `minimax/minimax-m2.7:free` | MiniMax M2.7 | `:free` | 192K (196,608) | `JSON_OBJECT` | Different MiniMax generation from M3. Tradeoff: smaller window than M3; structure is JSON mode, not JSON Schema. |
-| `PROSECUTION_1` | `nvidia/nemotron-3-ultra-550b-a55b:free` | NVIDIA Nemotron 3 Ultra | `:free` | 1M (1,000,000) | `PROMPT_ONLY` | Promoted from the approved standby pool after Laguna S 2.1 failed in deployed use. The 2026-08-30 public catalog check confirmed the exact zero-priced ID and 1M context window. Tradeoff: no `response_format`; JSON parse + Zod required. |
+| `DEFENSE_2` | `mistralai/mistral-small-3.2-24b-instruct` | Mistral Small 3.2 24B | paid | 131K (131,072) | `JSON_SCHEMA` | Replaces the slow MiniMax M2.7 free endpoint. Low listed price, fast provider throughput, and improved structured-output/function-calling behavior. |
+| `PROSECUTION_1` | `qwen/qwen3-30b-a3b-instruct-2507` | Qwen3 30B A3B Instruct | paid | 262K (262,144) | `JSON_SCHEMA` | Replaces Nemotron 3 Ultra after repeated long-running free-endpoint risk. Very low listed price, multilingual instruction following, and structured-output support. |
 | `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
 | `JUDGE_1` | `openai/gpt-4.1` | OpenAI GPT-4.1 | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces `z-ai/glm-5.2:free` after both allowed deployed attempts returned upstream HTTP 429. Catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 | `JUDGE_2` | `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super | `:free` | 256K (262,144) | `JSON_SCHEMA` | Open hybrid MoE with reasoning and schema support. Succeeded on attempt 1 in the latest deployed MIXED Judge stage and was not changed. |
@@ -337,6 +337,12 @@ Currently approved emergency candidates, in recorded order:
 `nvidia/nemotron-3-super-120b-a12b:free` remains a primary `MIXED_MODELS` `JUDGE_2` ID and is not a standby candidate. Each standby's explicit output strategy is version-controlled in `lib/ai/configurations/output-modes.ts`.
 
 These candidates are used only by the bounded `MIXED_MODELS` recovery coordinator after an eligible primary failure exhausts its two attempts. They are never passed to OpenRouter as a router/fallback array, and `SAME_MODEL` never substitutes a candidate.
+
+### Current low-cost reliability revision
+
+On 2026-08-30, the two slowest/problematic MIXED Advocate assignments were replaced before a fresh Case. `DEFENSE_2` moved from `minimax/minimax-m2.7:free` to Mistral Small 3.2, and `PROSECUTION_1` moved from Nemotron 3 Ultra free to Qwen3 30B A3B Instruct. Both replacements are paid endpoints, but their listed per-token prices are low enough that a complete Tribunal run remains in the cents-or-less range at current prompt sizes. The change is configuration-only: retries, recovery, persistence, streaming, and SAME_MODEL behavior are unchanged.
+
+The OpenRouter model pages currently list Mistral Small 3.2 at $0.075/$0.20 per million input/output tokens and Qwen3 30B A3B at approximately $0.048/$0.193 per million during the displayed promotion. These prices and provider performance are operational observations and must be rechecked before a later change.
 
 They exist because free-model availability is volatile. An unavailable primary model must not be silently replaced inside an already-defined Tribunal Run. The normal attempt/retry/failure policy applies. The standby pool is for an explicit future configuration change and a new execution. The new effective configuration must remain auditable.
 

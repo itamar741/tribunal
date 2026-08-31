@@ -53,6 +53,11 @@ export type RunResults = {
   failureReason: string | null;
   recoveryCycle?: number;
   fallbackUsed?: boolean;
+  /** Persisted configuration, exposed read-only so the reviewer can identify
+   * a seat before its first Model Call audit row exists. */
+  modelAssignments?: {
+    readonly [Role in ModelCallAgentRole]: string;
+  };
   startedAt: Date | null;
   completedAt: Date | null;
   advocates: {

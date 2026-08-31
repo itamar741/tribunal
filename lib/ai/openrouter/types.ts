@@ -125,4 +125,9 @@ export type OpenRouterClientOptions = {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
   now?: () => number;
+  /**
+   * Receives transient text from a streaming provider response. Callers must
+   * treat it as unvalidated: it is never persisted by this transport.
+   */
+  onDelta?: (delta: string) => void;
 };

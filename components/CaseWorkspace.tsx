@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  executeCase,
+  executeCaseWithLiveProgress,
   getCaseResults,
   loadPersistedResultsAfterExecution,
+  resumeRunWithLiveProgress,
 } from "@/lib/ui/tribunal-client";
+import type { LiveExecutionProgressHandler, LiveExecutionUpdates } from "@/lib/ui/live-execution";
 import type { CaseResultsView } from "@/lib/ui/types";
 import { CaseResultsView as CaseResults } from "./CaseResultsView";
 import { CaseWorkspaceHeader } from "./CaseWorkspaceHeader";
@@ -22,6 +24,78 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
   const [state, setState] = useState<WorkspaceState>({ status: "loading" });
   const [executing, setExecuting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [liveUpdates, setLiveUpdates] = useState<LiveExecutionUpdates>({});
+
+  const onLiveProgress = useCallback<LiveExecutionProgressHandler>((event) => {
+    setLiveUpdates((current) => {
+      const run = current[event.runKind] ?? {};
+      const previous = run[event.role];
+      if (event.type === "attempt_succeeded") {
+        const withoutSeat = { ...run };
+        delete withoutSeat[event.role];
+        return { ...current, [event.runKind]: withoutSeat };
+      }
+      if (event.type === "attempt_started") {
+        return {
+          ...current,
+          [event.runKind]: {
+            ...run,
+            [event.role]: {
+              role: event.role,
+              stage: event.stage,
+              model: event.model,
+              attempt: event.attempt,
+              modelSource: event.modelSource,
+              recoveryCycle: event.recoveryCycle,
+              status: "LOADING",
+              draft: "",
+            },
+          },
+        };
+      }
+      if (event.type === "draft_delta") {
+        const active =
+          previous &&
+          previous.status === "LOADING" &&
+          previous.model === event.model &&
+          previous.attempt === event.attempt
+            ? previous
+            : {
+                role: event.role,
+                stage: event.stage,
+                model: event.model,
+                attempt: event.attempt,
+                modelSource: event.modelSource,
+                recoveryCycle: event.recoveryCycle,
+                status: "LOADING" as const,
+                draft: "",
+              };
+        return {
+          ...current,
+          [event.runKind]: {
+            ...run,
+            [event.role]: { ...active, draft: active.draft + (event.delta ?? "") },
+          },
+        };
+      }
+      return {
+        ...current,
+        [event.runKind]: {
+          ...run,
+          [event.role]: {
+            role: event.role,
+            stage: event.stage,
+            model: event.model,
+            attempt: event.attempt,
+            modelSource: event.modelSource,
+            recoveryCycle: event.recoveryCycle,
+            status: "FAILED",
+            draft: "",
+          },
+        },
+      };
+    });
+  }, []);
 
   const loadResults = useCallback(async () => {
     const result = await getCaseResults(caseId);
@@ -91,8 +165,9 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
     }
     setExecuting(true);
     setActionError(null);
+    setLiveUpdates({});
     try {
-      const executed = await executeCase(caseId);
+      const executed = await executeCaseWithLiveProgress(caseId, onLiveProgress);
       if (!executed.ok) {
         setActionError(executed.error);
         await loadResults();
@@ -111,6 +186,7 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
       setActionError("The Tribunal could not be reached. Try again.");
     } finally {
       setExecuting(false);
+      setLiveUpdates({});
     }
   }
 
@@ -118,15 +194,16 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
     if (executing) return;
     setExecuting(true);
     setActionError(null);
+    setLiveUpdates({});
     try {
-      const response = await fetch(`/api/cases/${encodeURIComponent(caseId)}/runs/${encodeURIComponent(runId)}/resume`, { method: "POST" });
-      const body = (await response.json()) as { ok: boolean; error?: string };
-      if (!response.ok) setActionError(body.error ?? "This Run could not be resumed.");
+      const result = await resumeRunWithLiveProgress(caseId, runId, onLiveProgress);
+      if (!result.ok) setActionError(result.error);
       await loadResults();
     } catch {
       setActionError("The recovery request could not be reached. Try again.");
     } finally {
       setExecuting(false);
+      setLiveUpdates({});
     }
   }
 
@@ -186,6 +263,7 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
         <CaseResults
           results={state.results}
           onResume={executing ? undefined : onResume}
+          liveUpdates={liveUpdates}
         />
       ) : null}
     </div>

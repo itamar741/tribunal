@@ -42,7 +42,10 @@ function failureFields() {
   };
 }
 
-function buildRequestBody(input: OpenRouterChatCompletionInput): string {
+function buildRequestBody(
+  input: OpenRouterChatCompletionInput,
+  stream: boolean,
+): string {
   if (input.model.trim() === FORBIDDEN_ROUTER_ID) {
     throw new Error("OpenRouter requests must use a concrete model ID.");
   }
@@ -51,6 +54,11 @@ function buildRequestBody(input: OpenRouterChatCompletionInput): string {
     model: input.model,
     messages: input.messages,
   };
+
+  if (stream) {
+    body.stream = true;
+    body.stream_options = { include_usage: true };
+  }
 
   if (input.output.mode === OpenRouterOutputMode.JSON_SCHEMA) {
     body.response_format = {
@@ -73,6 +81,110 @@ function buildRequestBody(input: OpenRouterChatCompletionInput): string {
   return JSON.stringify(body);
 }
 
+type StreamReadResult = {
+  payload: unknown;
+  content: string;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value != null && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function streamPayloadWithContent(
+  lastPayload: Record<string, unknown> | null,
+  content: string,
+): unknown {
+  if (lastPayload?.error != null) {
+    return lastPayload;
+  }
+
+  const lastChoice = Array.isArray(lastPayload?.choices)
+    ? asRecord(lastPayload.choices[0])
+    : null;
+  return {
+    ...(lastPayload ?? {}),
+    choices: [
+      {
+        ...(lastChoice ?? {}),
+        message: { role: "assistant", content },
+      },
+    ],
+  };
+}
+
+/** Reads OpenAI-compatible SSE without retaining the raw stream anywhere. */
+async function readStreamingCompletion(
+  response: Response,
+  onDelta: (delta: string) => void,
+): Promise<StreamReadResult> {
+  if (!response.body) {
+    return { payload: null, content: "" };
+  }
+
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let buffer = "";
+  let content = "";
+  let lastPayload: Record<string, unknown> | null = null;
+
+  const consumeEvent = (event: string) => {
+    const data = event
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n");
+    if (!data || data === "[DONE]") {
+      return;
+    }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(data) as unknown;
+    } catch {
+      return;
+    }
+    const record = asRecord(parsed);
+    if (!record) {
+      return;
+    }
+    lastPayload = record;
+    const choices = Array.isArray(record.choices) ? record.choices : [];
+    const delta = asRecord(asRecord(choices[0])?.delta)?.content;
+    if (typeof delta === "string" && delta.length > 0) {
+      content += delta;
+      onDelta(delta);
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value, { stream: !done });
+    let separator = buffer.search(/\r?\n\r?\n/);
+    while (separator >= 0) {
+      const event = buffer.slice(0, separator);
+      const separatorLength = buffer.startsWith("\r\n\r\n", separator)
+        ? 4
+        : 2;
+      buffer = buffer.slice(separator + separatorLength);
+      consumeEvent(event);
+      separator = buffer.search(/\r?\n\r?\n/);
+    }
+    if (done) {
+      break;
+    }
+  }
+  if (buffer.trim().length > 0) {
+    consumeEvent(buffer);
+  }
+
+  return {
+    payload: streamPayloadWithContent(lastPayload, content),
+    content,
+  };
+}
+
 export async function completeChat(
   input: OpenRouterChatCompletionInput,
   options: OpenRouterClientOptions,
@@ -80,7 +192,7 @@ export async function completeChat(
   const fetchImpl = options.fetchImpl ?? fetch;
   const timeoutMs = options.timeoutMs ?? OPENROUTER_ATTEMPT_TIMEOUT_MS;
   const now = options.now ?? Date.now;
-  const body = buildRequestBody(input);
+  const body = buildRequestBody(input, Boolean(options.onDelta));
   const startedAt = now();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -99,13 +211,17 @@ export async function completeChat(
       signal: controller.signal,
     });
 
-    const rawText = await response.text();
     let parsed: unknown = null;
-    if (rawText.length > 0) {
-      try {
-        parsed = JSON.parse(rawText) as unknown;
-      } catch {
-        parsed = null;
+    if (options.onDelta && response.ok) {
+      parsed = (await readStreamingCompletion(response, options.onDelta)).payload;
+    } else {
+      const rawText = await response.text();
+      if (rawText.length > 0) {
+        try {
+          parsed = JSON.parse(rawText) as unknown;
+        } catch {
+          parsed = null;
+        }
       }
     }
 

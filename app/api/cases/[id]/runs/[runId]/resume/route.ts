@@ -1,30 +1,51 @@
 import { NextResponse } from "next/server";
+import { acceptsEventStream, streamExecution } from "@/lib/api/server-sent-events";
 import { getOpenRouterApiKey } from "@/lib/ai/openrouter";
 import { isCaseId, PostgresCaseRepository, PostgresTribunalRunRepository } from "@/lib/cases";
 import { PostgresModelCallRepository } from "@/lib/model-calls";
 import { getCaseResults } from "@/lib/results";
-import { executeTribunalRun } from "@/lib/tribunal";
+import { executeTribunalRun, type ModelProgressListener } from "@/lib/tribunal";
 
 export const runtime = "nodejs";
 export const maxDuration = 800;
 
+type ResumeResult = {
+  status: number;
+  body: { ok: boolean; code?: string; error?: string; runId?: string; status?: "SUCCEEDED" | "FAILED" };
+};
+
 /** Resume exactly one FAILED durable Run. claimResume is conditional, so a
  * concurrent request cannot start a duplicate recovery cycle. */
-export async function POST(_request: Request, context: { params: Promise<{ id: string; runId: string }> }) {
-  const { id, runId } = await context.params;
-  if (!isCaseId(id) || !isCaseId(runId)) return NextResponse.json({ ok: false, code: "INVALID_ID", error: "The Case or Run ID is not valid." }, { status: 400 });
+async function resume(
+  id: string,
+  runId: string,
+  onProgress?: ModelProgressListener,
+): Promise<ResumeResult> {
+  if (!isCaseId(id) || !isCaseId(runId)) {
+    return { status: 400, body: { ok: false, code: "INVALID_ID", error: "The Case or Run ID is not valid." } };
+  }
   const apiKey = getOpenRouterApiKey();
-  if (!apiKey) return NextResponse.json({ ok: false, code: "OPENROUTER_UNAVAILABLE", error: "Model execution is not configured." }, { status: 503 });
+  if (!apiKey) {
+    return { status: 503, body: { ok: false, code: "OPENROUTER_UNAVAILABLE", error: "Model execution is not configured." } };
+  }
   const cases = new PostgresCaseRepository();
   const runs = new PostgresTribunalRunRepository();
   const modelCalls = new PostgresModelCallRepository();
   const record = await cases.getById(id);
   const run = record?.runs.find((item) => item.id === runId);
-  if (!record || !run) return NextResponse.json({ ok: false, code: "RUN_NOT_FOUND", error: "No matching Tribunal Run exists." }, { status: 404 });
+  if (!record || !run) {
+    return { status: 404, body: { ok: false, code: "RUN_NOT_FOUND", error: "No matching Tribunal Run exists." } };
+  }
   let claimed;
-  try { claimed = await runs.claimResume(runId); } catch { return NextResponse.json({ ok: false, code: "RUN_NOT_RESUMABLE", error: "This Run is no longer available for recovery." }, { status: 409 }); }
+  try {
+    claimed = await runs.claimResume(runId);
+  } catch {
+    return { status: 409, body: { ok: false, code: "RUN_NOT_RESUMABLE", error: "This Run is no longer available for recovery." } };
+  }
   const persisted = await getCaseResults({ caseId: id }, { cases, modelCalls });
-  if (!persisted.ok) return NextResponse.json({ ok: false, code: "RESULTS_UNAVAILABLE", error: "The persisted Run record could not be recovered." }, { status: 409 });
+  if (!persisted.ok) {
+    return { status: 409, body: { ok: false, code: "RESULTS_UNAVAILABLE", error: "The persisted Run record could not be recovered." } };
+  }
   const prior = persisted.results.runs[run.runType];
   const existingAdvocates = Object.fromEntries(Object.entries(prior.advocates).filter(([, value]) => value != null));
   const existingJudges = Object.fromEntries(Object.entries(prior.judges).filter(([, value]) => value != null));
@@ -33,6 +54,18 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     apiKey, recoveryCycle: claimed.recoveryCycle, skipMarkRunning: true,
     existingAdvocates,
     existingJudges,
-  }, { runs, modelCalls });
-  return NextResponse.json({ ok: outcome.ok, runId, status: outcome.ok ? "SUCCEEDED" : "FAILED" });
+  }, { runs, modelCalls, onProgress });
+  return { status: 200, body: { ok: outcome.ok, runId, status: outcome.ok ? "SUCCEEDED" : "FAILED" } };
+}
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ id: string; runId: string }> },
+): Promise<Response> {
+  const { id, runId } = await context.params;
+  if (acceptsEventStream(request)) {
+    return streamExecution((onProgress) => resume(id, runId, onProgress));
+  }
+  const result = await resume(id, runId);
+  return NextResponse.json(result.body, { status: result.status });
 }

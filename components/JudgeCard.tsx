@@ -2,14 +2,48 @@ import Image from "next/image";
 import { JUDGE_DISPLAY } from "@/lib/ui/agents";
 import { formatVerdict } from "@/lib/ui/format";
 import type { JudgeResponseView, JudgeRoleView } from "@/lib/ui/types";
+import type { SeatExecutionState } from "./AdvocateCard";
+
+function SeatState({ state }: { state: SeatExecutionState }) {
+  if (state === "LOADING") {
+    return (
+      <span className="agent-work-status agent-work-status-loading" role="status">
+        <span className="agent-work-spinner" aria-hidden="true" />
+        Deliberating
+      </span>
+    );
+  }
+  if (state === "FAILED") {
+    return (
+      <span className="agent-work-status agent-work-status-failed">
+        <span className="agent-work-failure-mark" aria-hidden="true">×</span>
+        Last attempt failed
+      </span>
+    );
+  }
+  if (state === "PENDING") {
+    return <span className="agent-work-status">Awaiting deliberation</span>;
+  }
+  return <span className="agent-work-status agent-work-status-succeeded">Record entered</span>;
+}
 
 export function JudgeCard({
   role,
   response,
+  model,
+  executionState,
+  liveDraft,
+  liveAttempt,
+  liveSource,
   presentation = "record",
 }: {
   role: JudgeRoleView;
   response: JudgeResponseView | null;
+  model: string;
+  executionState: SeatExecutionState;
+  liveDraft?: string;
+  liveAttempt?: 1 | 2;
+  liveSource?: "PRIMARY" | "FALLBACK";
   presentation?: "seat" | "record";
 }) {
   const { characterName, throneAsset } = JUDGE_DISPLAY[role];
@@ -29,6 +63,7 @@ export function JudgeCard({
           <div className="judge-throne-plaque">
             <h4 className="display-face font-bold">{characterName}</h4>
             <p>{role.replace("_", " ")}</p>
+            <p className="judge-seat-model" title={model}>{model}</p>
           </div>
         </header>
         {response ? (
@@ -37,9 +72,7 @@ export function JudgeCard({
             <span className="sr-only"> ({response.verdict})</span>
           </p>
         ) : (
-          <p className="judge-seat-vote judge-seat-vote-unavailable">
-            Judge output is unavailable.
-          </p>
+          <p className="judge-seat-vote judge-seat-vote-unavailable"><SeatState state={executionState} /></p>
         )}
       </article>
     );
@@ -52,6 +85,7 @@ export function JudgeCard({
         <p className="mt-0.5 text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
           {role.replace("_", " ")}
         </p>
+        <p className="agent-model-label" title={model}>{model}</p>
       </header>
       {response ? (
         <div className="judge-card-record mt-3 space-y-3 pt-3 text-sm leading-6">
@@ -66,9 +100,17 @@ export function JudgeCard({
             ))}
           </ol>
         </div>
+      ) : liveDraft != null ? (
+        <div className="live-draft judge-card-record mt-3 pt-3" aria-live="polite">
+          <p className="live-draft-label">
+            Live draft · unverified · attempt {liveAttempt ?? 1}
+            {liveSource === "FALLBACK" ? " · fallback" : ""}
+          </p>
+          <p className="live-draft-copy">{liveDraft || "Receiving the first words…"}</p>
+        </div>
       ) : (
         <p className="judge-card-record mt-3 pt-3 text-sm text-[var(--muted)]">
-          Judge output is unavailable.
+          <SeatState state={executionState} />
         </p>
       )}
     </article>

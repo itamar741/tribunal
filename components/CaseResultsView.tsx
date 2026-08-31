@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { formatRunStatus, formatVerdict } from "@/lib/ui/format";
 import type { CaseResultsView } from "@/lib/ui/types";
+import type { LiveExecutionUpdates } from "@/lib/ui/live-execution";
 import { AccountingSummary } from "./AccountingSummary";
 import { AttemptDetails } from "./AttemptDetails";
 import { CeremonialVerdictTableau } from "./CeremonialVerdictTableau";
@@ -103,7 +104,7 @@ function RunOutcomeCard({
   );
 }
 
-export function CaseResultsView({ results, onResume }: { results: CaseResultsView; onResume?: (runId: string) => void }) {
+export function CaseResultsView({ results, onResume, liveUpdates }: { results: CaseResultsView; onResume?: (runId: string) => void; liveUpdates?: LiveExecutionUpdates }) {
   const [selectedRunType, setSelectedRunType] = useState<RunType>("SAME_MODEL");
   const selectedRun = results.runs[selectedRunType];
 
@@ -151,7 +152,7 @@ export function CaseResultsView({ results, onResume }: { results: CaseResultsVie
         </div>
       ) : null}
 
-      <RunPanel run={selectedRun} />
+      <RunPanel run={selectedRun} liveUpdates={liveUpdates} />
 
       <details className="technical-record stone-panel text-[#e8dcc2]">
         <summary className="flex cursor-pointer items-center justify-between gap-4 px-5 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-[#d5b66d] sm:px-6">
