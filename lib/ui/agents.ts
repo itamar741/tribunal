@@ -33,7 +33,7 @@ export const JUDGE_DISPLAY: Record<
   },
   JUDGE_2: {
     characterName: "Menachem Elon",
-    throneAsset: "/assets/judges/throne-silver.png",
+    throneAsset: "/assets/judges/throne-silver-transparent.png",
   },
   JUDGE_3: {
     characterName: "Meir Shamgar",
