@@ -76,7 +76,7 @@ export function VerdictStampReveal({
         }
         rememberReveal(revealKey);
         setPhase("revealing");
-      }, 1_500);
+      }, 700);
     };
 
     const observer = new IntersectionObserver(

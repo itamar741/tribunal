@@ -15,11 +15,11 @@ Render Free constraints that matter for this MVP:
 - A Free web service spins down after 15 minutes without inbound traffic and may cold-start on the next request. Persistent Case/Run/`model_calls` data remains in Supabase, not on Render’s ephemeral filesystem.
 - Pushes to `main` trigger a new Render deploy.
 
-Do not add Render-specific application architecture (no queues, workers, SSE, or polling).
+Do not add Render-specific durable infrastructure such as queues or workers. The app may use the existing read-only results polling and optional SSE response transport for live progress; neither creates background jobs or changes persistence semantics.
 
 **Vercel Pro** remains a documented alternative if the host is later changed: official Fluid compute maximum is 800s ([Configuring Maximum Duration](https://vercel.com/docs/functions/configuring-functions/duration)), and the execute route already exports `maxDuration = 800`. Vercel Hobby (300s maximum) is not sufficient for the bounded worst-case execute duration.
 
-Do not move to queues, workers, SSE, or polling unless a later measured host limit proves the synchronous request cannot finish.
+Do not move execution to queues or workers unless a later measured host limit proves the synchronous request cannot finish. SSE is only an optional response transport for the existing synchronous request.
 
 ## Required environment
 
