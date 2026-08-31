@@ -89,6 +89,9 @@ export type RunResultsView = {
   failureReason: string | null;
   recoveryCycle?: number;
   fallbackUsed?: boolean;
+  modelAssignments?: {
+    readonly [Role in AgentRoleView]: string;
+  };
   startedAt: string | null;
   completedAt: string | null;
   advocates: {

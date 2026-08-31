@@ -1,10 +1,10 @@
 import { Pool, type PoolClient, type QueryResult, type QueryResultRow } from "pg";
-import { DatabaseConfigError } from "./errors";
+import { DatabaseConfigError, isDatabaseUnavailableError } from "./errors";
 import { createSslConfig } from "./ssl";
 
 let pool: Pool | undefined;
 
-export { DatabaseConfigError };
+export { DatabaseConfigError, isDatabaseUnavailableError };
 
 function requireDatabaseUrl(): string {
   const url = process.env.DATABASE_URL;
@@ -22,6 +22,10 @@ export function getPool(): Pool {
     pool = new Pool({
       connectionString,
       ssl: createSslConfig(connectionString),
+      // Keep read-only pages from hanging indefinitely when the hosted
+      // database is paused or temporarily unreachable.
+      connectionTimeoutMillis: 10_000,
+      query_timeout: 15_000,
     });
   }
   return pool;

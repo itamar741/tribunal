@@ -40,6 +40,22 @@ function jsonResponse(
   });
 }
 
+function sseResponse(events: unknown[]): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const event of events) {
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+  return new Response(stream, {
+    headers: { "content-type": "text/event-stream" },
+  });
+}
+
 describe("OpenRouter env", () => {
   it("returns null when the server secret is missing", () => {
     assert.equal(getOpenRouterApiKey({}), null);
@@ -99,6 +115,53 @@ describe("mapOpenRouterUsage", () => {
 });
 
 describe("completeChat", () => {
+  it("streams deltas transiently and reconstructs the final completion", async () => {
+    const deltas: string[] = [];
+    const captured = { body: null as Record<string, unknown> | null };
+    const result = await completeChat(
+      {
+        model: MODEL,
+        messages: [{ role: "user", content: "hello" }],
+        output: SCHEMA_OUTPUT,
+      },
+      {
+        apiKey: API_KEY,
+        onDelta: (delta) => deltas.push(delta),
+        fetchImpl: async (_url, init) => {
+          captured.body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+          return sseResponse([
+            {
+              id: "gen-stream",
+              model: MODEL,
+              choices: [{ delta: { content: "{\"summary\":" } }],
+            },
+            {
+              id: "gen-stream",
+              model: MODEL,
+              choices: [{ delta: { content: "\"live\"}" } }],
+              usage: {
+                prompt_tokens: 4,
+                completion_tokens: 4,
+                total_tokens: 8,
+                cost: 0,
+              },
+            },
+          ]);
+        },
+      },
+    );
+
+    assert.equal(captured.body?.stream, true);
+    assert.deepEqual(captured.body?.stream_options, { include_usage: true });
+    assert.deepEqual(deltas, ['{"summary":', '"live"}']);
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      assert.equal(result.content, '{"summary":"live"}');
+      assert.equal(result.providerCallId, "gen-stream");
+      assert.equal(result.usage.totalTokens, 8);
+    }
+  });
+
   it("posts a concrete model with JSON Schema and require_parameters", async () => {
     let capturedUrl = "";
     let capturedInit: RequestInit | undefined;

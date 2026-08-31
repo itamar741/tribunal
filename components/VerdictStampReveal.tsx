@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { RunResultsView } from "@/lib/ui/types";
 
 type FinalVerdict = NonNullable<RunResultsView["finalVerdict"]>;
@@ -36,20 +36,77 @@ export function VerdictStampReveal({
   runId: string;
   verdict: FinalVerdict;
 }) {
-  const [revealing, setRevealing] = useState(false);
+  const [phase, setPhase] = useState<"waiting" | "revealing" | "revealed">(
+    "waiting",
+  );
+  const rootRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const revealKey = `tribunal:verdict-reveal:${runId}:${verdict}`;
     if (hasAlreadyRevealed(revealKey)) {
+      const restoreTimer = window.setTimeout(() => setPhase("revealed"), 0);
+      return () => window.clearTimeout(restoreTimer);
+    }
+
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") {
       return;
     }
 
-    const animationFrame = window.requestAnimationFrame(() => {
-      rememberReveal(revealKey);
-      setRevealing(true);
-    });
+    let inView = false;
+    let focused = document.visibilityState === "visible" && document.hasFocus();
+    let attentionTimer: number | null = null;
 
-    return () => window.cancelAnimationFrame(animationFrame);
+    const stopAttentionTimer = () => {
+      if (attentionTimer != null) {
+        window.clearTimeout(attentionTimer);
+        attentionTimer = null;
+      }
+    };
+
+    const beginWhenAttentive = () => {
+      stopAttentionTimer();
+      if (!inView || !focused || hasAlreadyRevealed(revealKey)) {
+        return;
+      }
+      attentionTimer = window.setTimeout(() => {
+        attentionTimer = null;
+        if (!inView || !focused || hasAlreadyRevealed(revealKey)) {
+          return;
+        }
+        rememberReveal(revealKey);
+        setPhase("revealing");
+      }, 1_500);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        inView = entry?.isIntersecting === true && entry.intersectionRatio >= 0.6;
+        beginWhenAttentive();
+      },
+      { threshold: [0, 0.6] },
+    );
+    const onVisibilityChange = () => {
+      focused = document.visibilityState === "visible" && document.hasFocus();
+      beginWhenAttentive();
+    };
+    const onFocusChange = () => {
+      focused = document.visibilityState === "visible" && document.hasFocus();
+      beginWhenAttentive();
+    };
+
+    observer.observe(root);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocusChange);
+    window.addEventListener("blur", onFocusChange);
+
+    return () => {
+      stopAttentionTimer();
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocusChange);
+      window.removeEventListener("blur", onFocusChange);
+    };
   }, [runId, verdict]);
 
   const impression =
@@ -59,7 +116,8 @@ export function VerdictStampReveal({
 
   return (
     <span
-      className={`verdict-stamp-reveal ${revealing ? "is-revealing" : ""}`}
+      ref={rootRef}
+      className={`verdict-stamp-reveal is-${phase}`}
       aria-hidden="true"
     >
       <Image
@@ -70,6 +128,9 @@ export function VerdictStampReveal({
         sizes="(max-width: 420px) 104px, 144px"
         loading="eager"
         className="verdict-rubber-impression"
+        onAnimationEnd={() => {
+          if (phase === "revealing") setPhase("revealed");
+        }}
       />
       <span className="verdict-impact-ring" />
       <Image

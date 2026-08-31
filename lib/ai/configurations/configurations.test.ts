@@ -119,8 +119,8 @@ describe("MIXED_MODELS assignment", () => {
     assert.equal(new Set(modelIds).size, 7);
     assert.deepEqual(MIXED_MODELS_BY_ROLE, {
       [TribunalAgentRole.DEFENSE_1]: "openai/gpt-4.1-mini",
-      [TribunalAgentRole.DEFENSE_2]: "minimax/minimax-m2.7:free",
-      [TribunalAgentRole.PROSECUTION_1]: "nvidia/nemotron-3-ultra-550b-a55b:free",
+      [TribunalAgentRole.DEFENSE_2]: "mistralai/mistral-small-3.2-24b-instruct",
+      [TribunalAgentRole.PROSECUTION_1]: "qwen/qwen3-30b-a3b-instruct-2507",
       [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
       [TribunalAgentRole.JUDGE_1]: "openai/gpt-4.1",
       [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
@@ -142,10 +142,14 @@ describe("model-selection constraints", () => {
       "openai/gpt-4.1-mini",
       "openai/gpt-4.1",
       "meta-llama/llama-4-maverick",
+      "mistralai/mistral-small-3.2-24b-instruct",
+      "qwen/qwen3-30b-a3b-instruct-2507",
     ]);
     assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1-mini"), true);
     assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1"), true);
     assert.equal(isExplicitlyPaidModelId("meta-llama/llama-4-maverick"), true);
+    assert.equal(isExplicitlyPaidModelId("mistralai/mistral-small-3.2-24b-instruct"), true);
+    assert.equal(isExplicitlyPaidModelId("qwen/qwen3-30b-a3b-instruct-2507"), true);
     assert.equal(isExplicitlyPaidModelId("openai/gpt-oss-120b"), false);
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.DEFENSE_1],
@@ -272,7 +276,7 @@ describe("model-selection constraints", () => {
     );
     assert.equal(
       MIXED_MODELS_BY_ROLE[TribunalAgentRole.PROSECUTION_1],
-      "nvidia/nemotron-3-ultra-550b-a55b:free",
+      "qwen/qwen3-30b-a3b-instruct-2507",
     );
     assert.equal(
       (Object.values(MIXED_MODELS_BY_ROLE) as readonly string[]).includes(
@@ -385,8 +389,12 @@ describe("model output modes", () => {
       ModelOutputMode.JSON_OBJECT,
     );
     assert.equal(
-      getOutputModeForModel("minimax/minimax-m2.7:free"),
-      ModelOutputMode.JSON_OBJECT,
+      getOutputModeForModel("mistralai/mistral-small-3.2-24b-instruct"),
+      ModelOutputMode.JSON_SCHEMA,
+    );
+    assert.equal(
+      getOutputModeForModel("qwen/qwen3-30b-a3b-instruct-2507"),
+      ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
       getOutputModeForModel("google/gemma-4-31b-it:free"),
@@ -418,14 +426,10 @@ describe("model output modes", () => {
       getOutputModeForModel(
         MIXED_MODELS_BY_ROLE[TribunalAgentRole.PROSECUTION_1],
       ),
-      ModelOutputMode.PROMPT_ONLY,
+      ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
       getOutputModeForModel("nvidia/nemotron-3.5-lightning:free"),
-      ModelOutputMode.PROMPT_ONLY,
-    );
-    assert.equal(
-      getOutputModeForModel("nvidia/nemotron-3-ultra-550b-a55b:free"),
       ModelOutputMode.PROMPT_ONLY,
     );
     assert.equal(

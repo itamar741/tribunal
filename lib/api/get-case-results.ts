@@ -1,5 +1,5 @@
 import { isCaseId, type CaseRepository } from "../cases";
-import { DatabaseConfigError } from "../db";
+import { isDatabaseUnavailableError } from "../db";
 import { getCaseResults, type GetCaseResultsDeps } from "../results";
 import type { ModelCallRepository } from "../model-calls";
 import { apiError, internalError, type ApiJsonResult } from "./http";
@@ -39,8 +39,8 @@ export async function handleGetCaseResults(
       } satisfies GetCaseResultsDeps,
     );
   } catch (error) {
-    if (error instanceof DatabaseConfigError) {
-      return apiError(503, "DATABASE_UNAVAILABLE", error.message);
+    if (isDatabaseUnavailableError(error)) {
+      return apiError(503, "DATABASE_UNAVAILABLE", "The database is unavailable.");
     }
     return internalError();
   }

@@ -1,7 +1,7 @@
 import { getOpenRouterApiKey } from "../ai/openrouter";
 import { isCaseId } from "../cases";
 import type { CaseRecord, CaseRepository } from "../cases";
-import { DatabaseConfigError } from "../db";
+import { isDatabaseUnavailableError } from "../db";
 import type {
   CaseTribunalResult,
   ExecuteCaseTribunalsInput,
@@ -40,8 +40,8 @@ export async function handleExecuteCase(
   try {
     record = await deps.cases.getById(caseId);
   } catch (error) {
-    if (error instanceof DatabaseConfigError) {
-      return apiError(503, "DATABASE_UNAVAILABLE", error.message);
+    if (isDatabaseUnavailableError(error)) {
+      return apiError(503, "DATABASE_UNAVAILABLE", "The database is unavailable.");
     }
     return internalError();
   }
@@ -63,8 +63,8 @@ export async function handleExecuteCase(
       apiKey,
     });
   } catch (error) {
-    if (error instanceof DatabaseConfigError) {
-      return apiError(503, "DATABASE_UNAVAILABLE", error.message);
+    if (isDatabaseUnavailableError(error)) {
+      return apiError(503, "DATABASE_UNAVAILABLE", "The database is unavailable.");
     }
     return internalError();
   }

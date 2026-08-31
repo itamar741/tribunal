@@ -87,6 +87,19 @@ describe("handleListRecentCases", () => {
     }
   });
 
+  it("recognizes PostgreSQL connection timeouts as database unavailability", async () => {
+    const result = await handleListRecentCases({
+      async listRecentExecutedCases() {
+        throw new Error("Connection terminated due to connection timeout");
+      },
+    });
+    assert.equal(result.status, 503);
+    assert.equal(result.body.ok, false);
+    if (!result.body.ok) {
+      assert.equal(result.body.code, "DATABASE_UNAVAILABLE");
+    }
+  });
+
   it("returns a safe internal error for unexpected failures", async () => {
     const result = await handleListRecentCases({
       async listRecentExecutedCases() {

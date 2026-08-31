@@ -137,6 +137,25 @@ describe("handleGetCaseResults", () => {
     }
   });
 
+  it("returns 503 for PostgreSQL connection timeouts", async () => {
+    const result = await handleGetCaseResults(
+      "00000000-0000-4000-8000-000000000001",
+      {
+        cases: {
+          async getById() {
+            throw new Error("Connection terminated due to connection timeout");
+          },
+        },
+        modelCalls: emptyModelCalls,
+      },
+    );
+    assert.equal(result.status, 503);
+    assert.equal(result.body.ok, false);
+    if (!result.body.ok) {
+      assert.equal(result.body.code, "DATABASE_UNAVAILABLE");
+    }
+  });
+
   it("exposes a successful sibling after a failed Run without inventing a Case verdict", async () => {
     const cases = new InMemoryCaseRepository();
     const created = await cases.create({

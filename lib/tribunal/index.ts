@@ -37,6 +37,11 @@ export type {
   JudgeStageSuccess,
 } from "./execute-judge-stage";
 export { calculateMajority } from "./majority";
+export type {
+  LiveModelAttempt,
+  ModelProgressEvent,
+  ModelProgressListener,
+} from "./model-progress";
 export { executeTribunalRun } from "./execute-tribunal-run";
 export type {
   ExecuteTribunalRunDeps,

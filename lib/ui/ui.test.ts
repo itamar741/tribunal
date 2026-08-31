@@ -22,6 +22,7 @@ import {
 } from "./fixtures";
 import {
   executeCase,
+  executeCaseWithLiveProgress,
   getCaseResults,
   getRecentCases,
   loadPersistedResultsAfterExecution,
@@ -115,6 +116,33 @@ describe("tribunal client", () => {
     assert.equal(serialized.includes("model"), false);
     assert.equal(serialized.includes("profile"), false);
     assert.equal(serialized.includes("runId"), false);
+  });
+
+  it("keeps streamed model drafts separate from the final execution response", async () => {
+    const encoder = new TextEncoder();
+    const progress: string[] = [];
+    const fetchImpl = mockFetch((_url, init) => {
+      assert.equal((init?.headers as Record<string, string>).Accept, "text/event-stream");
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(encoder.encode('event: model-progress\ndata: {"type":"attempt_started","runId":"run-1","runKind":"SAME_MODEL","role":"DEFENSE_1","stage":"ADVOCATES","model":"model-a","attempt":1,"modelSource":"PRIMARY","recoveryCycle":1}\n\n'));
+          controller.enqueue(encoder.encode('event: model-progress\ndata: {"type":"draft_delta","runId":"run-1","runKind":"SAME_MODEL","role":"DEFENSE_1","stage":"ADVOCATES","model":"model-a","attempt":1,"modelSource":"PRIMARY","recoveryCycle":1,"delta":"unverified words"}\n\n'));
+          controller.enqueue(encoder.encode('event: execution-complete\ndata: {"status":200,"body":{"ok":true,"caseId":"00000000-0000-4000-8000-000000000001","runs":{"SAME_MODEL":{"ok":true},"MIXED_MODELS":{"ok":true}}}}\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, { headers: { "content-type": "text/event-stream" } });
+    });
+    const result = await executeCaseWithLiveProgress(
+      "00000000-0000-4000-8000-000000000001",
+      (event) => progress.push(`${event.type}:${event.model}:${event.delta ?? ""}`),
+      fetchImpl,
+    );
+    assert.equal(result.ok, true);
+    assert.deepEqual(progress, [
+      "attempt_started:model-a:",
+      "draft_delta:model-a:unverified words",
+    ]);
   });
 
   it("loads persisted results after a POST RUN_FAILURE", async () => {
@@ -217,6 +245,7 @@ describe("CaseResultsView", () => {
     assert.match(html, /Jon Snow/);
     assert.match(html, /Daenerys Targaryen/);
     assert.match(html, /Aaron Barak/);
+    assert.match(html, /verdict-stamp-reveal is-waiting/);
     assert.equal(html.includes("Guilty"), false);
     assert.equal(html.includes("# Secret charge"), false);
     assert.equal(html.includes("OPENROUTER"), false);
@@ -406,4 +435,3 @@ describe("OpenCasePanel", () => {
     assert.match(html, /id="case-id"/);
   });
 });
-
