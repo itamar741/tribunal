@@ -26,7 +26,7 @@ import {
   getCaseResults,
   getRecentCases,
   loadPersistedResultsAfterExecution,
-  uploadChargeSheet,
+  createCanonicalCase,
 } from "./tribunal-client";
 
 function mockFetch(handler: (url: string, init?: RequestInit) => Response | Promise<Response>) {
@@ -67,34 +67,28 @@ describe("format", () => {
 });
 
 describe("tribunal client", () => {
-  it("returns the created Case ID after a successful upload", async () => {
+  it("creates the canonical Case without client-supplied input", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchImpl = mockFetch((url, init) => {
       calls.push({ url, init });
       return Response.json({
         ok: true,
         caseId: "00000000-0000-4000-8000-000000000001",
-        fileName: "case.md",
+        fileName: "t-001-the-realm-v-jon-snow.md",
         characterCount: 12,
         createdAt: "2026-01-01T00:00:00.000Z",
         runs: [],
       });
     });
-    const result = await uploadChargeSheet(
-      new File(["# Case"], "case.md", { type: "text/markdown" }),
-      fetchImpl,
-    );
+    const result = await createCanonicalCase(fetchImpl);
     assert.equal(result.ok, true);
     if (result.ok) {
       assert.equal(result.body.caseId, "00000000-0000-4000-8000-000000000001");
     }
-    assert.equal(calls[0]?.url, "/api/charge-sheet");
+    assert.equal(calls[0]?.url, "/api/cases");
     assert.equal(calls[0]?.init?.method, "POST");
-    assert.ok(calls[0]?.init?.body instanceof FormData);
-    assert.equal(
-      (calls[0]?.init?.body as FormData).has("chargeSheet"),
-      true,
-    );
+    assert.equal(calls[0]?.init?.body, undefined);
+    assert.equal(JSON.stringify(calls[0]?.init ?? {}).includes("chargeSheet"), false);
   });
 
   it("executes the created Case ID with no client configuration", async () => {

@@ -4,7 +4,7 @@ import type {
   ExecuteRunFailureResponse,
   ExecuteSuccessResponse,
   RecentCasesResponse,
-  UploadSuccessResponse,
+  CreateCaseSuccessResponse,
 } from "./types";
 import { readLiveExecution, type LiveExecutionProgressHandler } from "./live-execution";
 
@@ -42,24 +42,20 @@ function errorFrom(
   return { ok: false, status, error: fallback };
 }
 
-export async function uploadChargeSheet(
-  file: File,
+export async function createCanonicalCase(
   fetchImpl: typeof fetch = fetch,
-): Promise<ClientResult<UploadSuccessResponse>> {
-  const body = new FormData();
-  body.append("chargeSheet", file);
-  const response = await fetchImpl("/api/charge-sheet", {
+): Promise<ClientResult<CreateCaseSuccessResponse>> {
+  const response = await fetchImpl("/api/cases", {
     method: "POST",
-    body,
   });
   const payload = await readJson(response);
   if (!response.ok || !payload || typeof payload !== "object" || !("ok" in payload) || !payload.ok) {
-    return errorFrom(response.status, payload, "Charge sheet upload failed.");
+    return errorFrom(response.status, payload, "The Case could not be created.");
   }
   return {
     ok: true,
     status: response.status,
-    body: payload as UploadSuccessResponse,
+    body: payload as CreateCaseSuccessResponse,
   };
 }
 

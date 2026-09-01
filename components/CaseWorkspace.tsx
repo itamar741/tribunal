@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   executeCaseWithLiveProgress,
   getCaseResults,
@@ -20,11 +20,18 @@ type WorkspaceState =
 
 const RESULTS_POLL_INTERVAL_MS = 3_000;
 
-export function CaseWorkspace({ caseId }: { caseId: string }) {
+export function CaseWorkspace({
+  caseId,
+  autoStart = false,
+}: {
+  caseId: string;
+  autoStart?: boolean;
+}) {
   const [state, setState] = useState<WorkspaceState>({ status: "loading" });
   const [executing, setExecuting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [liveUpdates, setLiveUpdates] = useState<LiveExecutionUpdates>({});
+  const autoStartClaimed = useRef(false);
 
   const onLiveProgress = useCallback<LiveExecutionProgressHandler>((event) => {
     setLiveUpdates((current) => {
@@ -159,7 +166,7 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
     };
   }, [caseId, executing]);
 
-  async function onStart() {
+  const onStart = useCallback(async () => {
     if (executing) {
       return;
     }
@@ -188,7 +195,7 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
       setExecuting(false);
       setLiveUpdates({});
     }
-  }
+  }, [caseId, executing, loadResults, onLiveProgress]);
 
   async function onResume(runId: string) {
     if (executing) return;
@@ -212,32 +219,23 @@ export function CaseWorkspace({ caseId }: { caseId: string }) {
     state.results.runs.SAME_MODEL.status === "PENDING" &&
     state.results.runs.MIXED_MODELS.status === "PENDING";
 
+  useEffect(() => {
+    if (!autoStart || !bothPending || autoStartClaimed.current) {
+      return;
+    }
+    autoStartClaimed.current = true;
+    void onStart();
+  }, [autoStart, bothPending, onStart]);
+
   return (
     <div className="flex flex-col gap-6">
       {state.status === "ready" ? (
         <CaseWorkspaceHeader results={state.results} />
       ) : null}
 
-      {bothPending || executing ? (
+      {executing ? (
         <div className="parchment-panel p-5 sm:p-6">
-          {executing ? (
-            <TribunalExecutionState />
-          ) : (
-            <>
-              <p className="text-sm leading-6 text-[var(--muted)]">
-                Both runs are waiting. Starting the Tribunal executes SAME_MODEL
-                and MIXED_MODELS from the stored charge sheet.
-              </p>
-              <button
-                type="button"
-                onClick={onStart}
-                disabled={executing}
-                className="court-button mt-4 px-5 py-2.5 text-sm font-bold uppercase tracking-[0.1em] disabled:opacity-60"
-              >
-                Start Tribunal
-              </button>
-            </>
-          )}
+          <TribunalExecutionState />
         </div>
       ) : null}
 

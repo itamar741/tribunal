@@ -8,10 +8,10 @@ The MVP is implemented and deployed on Render. The accepted production dual-run 
 
 ```text
 Browser (UI)
-    │  charge sheet upload only
+    │  convene the canonical Case
     ▼
 Next.js server (App Router / Route Handlers / server modules)
-    │  file processing, prompts, profiles, model config,
+    │  canonical record, prompts, profiles, model config,
     │  validation, Tribunal engine, cost calculation
     ▼
 PostgreSQL (Supabase preferred)     OpenRouter (AI gateway)
@@ -21,34 +21,23 @@ PostgreSQL (Supabase preferred)     OpenRouter (AI gateway)
 
 | Layer | Responsibility |
 | --- | --- |
-| Browser | Present upload shell and later results; never holds secrets, prompts, profiles, or model keys |
-| Next.js server | Sole authority for file processing, AI calls, prompts, profiles, model configuration, validation, Tribunal orchestration, cost calculation |
+| Browser | Present the launch action and results; never supplies charge-sheet text or holds secrets, prompts, profiles, or model keys |
+| Next.js server | Sole authority for the canonical record, AI calls, prompts, profiles, model configuration, validation, Tribunal orchestration, cost calculation |
 | PostgreSQL | Durable case/run/result/audit storage |
 | OpenRouter | Model gateway for all AI calls |
 
 ## User input
 
-The application accepts **exactly one** user input: an uploaded **charge sheet file**.
+The homepage accepts one action: **convene the Tribunal**. It does not accept a file or editable Case content.
 
-Settled MVP input rules:
-
-- Only `.md` files are supported (extension check is case-insensitive).
-- Content must be valid UTF-8; malformed byte sequences are rejected, not replaced.
-- Maximum size is 1 MB, enforced server-side.
-- Content is read as UTF-8 text; Markdown is not parsed or rendered in the current upload/persistence phase.
-- The `.md` file is structured input, not arbitrary free-form Markdown.
-- Instructor Case T-001 (`The Realm v. Jon Snow`) is the canonical example charge sheet, stored as a project fixture at `fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`. That example contains labeled sections (Case, Accused, Deceased, Act alleged, base premises, agreed factual record, ISSUE, scope note). It is a reference example, not a complete generic Markdown grammar.
-- Do not implement structural parsing from T-001 alone. Until a machine-readable structural contract is explicitly recorded, validated Markdown text is stored unchanged.
-- There are no separate user-entered fields for defendant, alleged act, or question.
-- PDF, DOCX, TXT, image, OCR, and other formats are out of scope.
-- MIME type is not the sole acceptance criterion (browser/platform MIME for Markdown may vary).
+The server owns the canonical T-001 charge sheet (`The Realm v. Jon Snow`) at `fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`. Each launch reads that UTF-8 fixture, creates a fresh Case with exactly two `PENDING` Runs, navigates to the Case workspace, and starts both Runs. The browser cannot supply or replace the charge-sheet text. Existing Cases remain retrievable by ID without execution.
 
 ### Charge-sheet intake boundary
 
 ```text
-Upload transport (HTTP multipart)
+Homepage launch (POST with no body)
       ↓
-Charge-sheet validation / UTF-8 text read  (lib/charge-sheet)
+Server-owned canonical fixture read
       ↓
 Validated charge-sheet text
       ↓
@@ -57,11 +46,9 @@ Create Case + two Tribunal Runs (lib/cases) → PostgreSQL
 Tribunal execution (lib/tribunal) + Model Call audit
 ```
 
-- The route handler owns upload transport only.
-- `lib/charge-sheet` validates and reads text; later stages consume validated text, not browser upload mechanics.
-- Original uploaded files are **not** permanently stored (no filesystem archive, no database blob).
-- Validated Markdown text **is** persisted on the Case as the durable Tribunal input.
-- The original file name is persisted as Case metadata.
+- The creation route accepts no Case content from the browser.
+- Canonical Markdown text **is** persisted on each Case as its durable Tribunal input.
+- The canonical fixture name is persisted as Case metadata; no file/blob is uploaded or stored.
 - Structural parsing of the charge sheet is deferred. T-001 is the canonical instructor example, not a recorded generic grammar.
 
 ## Domain relationship: Case → Tribunal Runs
@@ -72,9 +59,9 @@ Case (one charge sheet)
  └── Tribunal Run B — MIXED_MODELS
 ```
 
-- Every successful charge-sheet upload creates a new Case with a unique ID.
+- Every homepage launch creates a new Case with a unique ID.
 - The original file name is stored with the Case.
-- Identical content uploaded again creates another Case with another unique ID; there is no MVP deduplication.
+- Repeated launches create separate Cases with separate IDs; there is no deduplication.
 - A persisted Case can be retrieved by its unique ID without rerunning the Tribunal.
 - Case initialization also creates **exactly two** durable Tribunal Run records in the same transaction: one `SAME_MODEL` and one `MIXED_MODELS`.
 - Each run has its own unique ID, references the owning Case, and starts in `PENDING` status (created; AI execution has not started).
@@ -454,13 +441,14 @@ Validated Advocate and Judge slots come from the single `SUCCEEDED` `model_calls
 Tribunal execution remains a modular server-side application service independent of browser transport. HTTP is only a trigger and query boundary.
 
 ```text
-POST /api/charge-sheet          → create Case + two PENDING Runs
+POST /api/cases                 → create canonical Case + two PENDING Runs (no request body)
 GET  /api/cases/recent          → five most recently executed Cases (read-only)
 GET  /api/cases/{id}            → Case metadata (no charge-sheet text)
 POST /api/cases/{id}/execute    → executeCaseTribunals(persisted charge sheet)
 GET  /api/cases/{id}/results    → getCaseResults (read-only)
 ```
 
+- `POST /api/cases` reads the canonical fixture on the server. Its request has no body and cannot override Case content.
 - `POST /api/cases/{id}/execute` uses the Case ID in the route as authority. It loads the persisted `charge_sheet_text` and `OPENROUTER_API_KEY` on the server. The client cannot supply Run IDs, model IDs, profiles, charge-sheet text, retry parameters, or verdicts.
 - HTTP **200** is used for every completed execution request: both Runs succeeded, one succeeded, or both failed. The JSON body is authoritative. `ok: true` means both Runs succeeded. `ok: false` with `reason: "RUN_FAILURE"` still includes both independent Run outcomes. Provider/model failures are not converted into an opaque 500.
 - Duplicate execute requests keep the existing per-Run `PENDING → RUNNING` claim. Already-started or terminal Runs return `NOT_PENDING` and make no additional model requests. There is no Case-level lock.
@@ -473,7 +461,7 @@ GET  /api/cases/{id}/results    → getCaseResults (read-only)
 
 ## Failure handling and retry policy
 
-Invalid uploads, processing failures, timeouts, malformed responses, and partial run failures must surface as failures. They must **not** be coerced into successful majority verdicts.
+Canonical-record read failures, processing failures, timeouts, malformed responses, and partial run failures must surface as failures. They must **not** be coerced into successful majority verdicts.
 
 Retry/attempt behavior is settled below. Bounded runtime retry for a single representative or Judge is implemented under `lib/ai/execution/`. Those helpers do not mark the Tribunal Run `SUCCEEDED` or `FAILED`. The Advocate-stage coordinator marks a run `FAILED` when any representative permanently fails and leaves a successful stage `RUNNING`. The Judge-stage coordinator calculates two-of-three majority from validated `verdict` fields only after three valid Judge responses, then marks `SUCCEEDED`. Any permanent Judge failure marks `FAILED` with no majority and a null final verdict. `executeTribunalRun` sequences those stages for one existing Run and does not add extra lifecycle writes. A fresh execution is claimed by the existing atomic `PENDING → RUNNING` transition; a Run that is already `RUNNING`, `SUCCEEDED`, or `FAILED` is rejected with no model requests and no new audit rows. `executeCaseTribunals` starts the Case’s two existing Runs concurrently and independently. `getCaseResults` reconstructs persisted outputs and accounting without executing models or replacing `tribunal_runs.final_verdict`.
 
@@ -536,15 +524,15 @@ The initial MVP timeout is **90 seconds per individual API attempt**, not one ti
 
 ### Manual reruns
 
-There is no manual rerun of an existing Tribunal Run in the MVP. Another complete execution requires uploading the charge sheet again, which creates a new Case with a new Case ID and two new Tribunal Runs. This preserves an immutable audit history.
+There is no manual rerun of an existing Tribunal Run in the MVP. Another complete execution requires using the homepage launch again, which creates a new Case with a new Case ID and two new Tribunal Runs. This preserves an immutable audit history.
 
 ## Project structure (foundation)
 
 ```text
-app/                 # Next.js UI and route handlers (upload transport)
+app/                 # Next.js UI and route handlers
 components/          # UI components
 lib/
-  charge-sheet/      # Validate/read .md → validated text (no MD parse)
+  charge-sheet/      # Canonical metadata; legacy validators are not wired to HTTP/UI
   cases/             # Create/retrieve Case records and their two Tribunal Runs
   model-calls/       # Persist/retrieve individual AI attempt audit rows
   tribunal/          # Reusable Tribunal engine
@@ -555,7 +543,7 @@ lib/
     configurations/  # Run kinds and model assignment config
   db/                # PostgreSQL access and migration runner
 supabase/migrations/ # Append-only SQL migrations
-fixtures/charge-sheets/ # Canonical T-001 reference example
+fixtures/charge-sheets/ # Server-owned canonical T-001 record
 docs/                # Framing, architecture, specification
 docs/reference/      # Instructor source dossier (provenance only)
 ```

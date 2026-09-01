@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AI Tribunal",
-  description: "Convene a dual AI Tribunal for a submitted charge sheet.",
+  description: "Convene a dual AI Tribunal for the canonical T-001 record.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

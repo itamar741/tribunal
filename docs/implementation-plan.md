@@ -4,6 +4,8 @@
 
 This plan recorded the dependency-ordered path to the completed MVP. All twelve phases are complete. It remains a historical planning artifact and does not authorize new implementation by itself.
 
+**2026-09-01 product revision:** the upload flow described in the historical phases below has been superseded. The active product uses the server-owned T-001 fixture, exposes one homepage launch action, creates a fresh Case, and starts both Runs automatically. There is no file-upload UI or upload route.
+
 ## MVP status
 
 **Complete.** Production is live on Render (GitHub `main` auto-deploy, Supabase transaction-pooler PostgreSQL, OpenRouter). The accepted production dual-run E2E succeeded: both `SAME_MODEL` and `MIXED_MODELS` persisted `NOT_JUSTIFIED`, `/cases/{id}` reload reconstructed those results without new model calls, and duplicate execution is prevented. Accounting and audit behavior were verified, including incomplete Case totals when a failed attempt returns no usage. Provider failures and retries remain explicit and fail closed.
@@ -13,18 +15,17 @@ This plan recorded the dependency-ordered path to the completed MVP. All twelve 
 Completed and verified:
 
 - Next.js 16 modular-monolith foundation.
-- `.md` charge sheet as the only user input.
-- Client convenience validation and server-authoritative validation.
-- Case-insensitive `.md` extension check, 1 MB size limit, strict UTF-8 read, and empty/whitespace rejection.
-- Upload transport separated from charge-sheet validation/read.
-- Every valid upload creates a unique Case; identical uploads create separate Cases; original file name and validated Markdown text are stored; original file/blob is not.
+- Server-owned T-001 charge sheet; the homepage launch is the only new-hearing input.
+- Server-authoritative loading of the non-empty canonical UTF-8 fixture.
+- Bodyless Case-creation transport separated from the canonical fixture loader.
+- Every launch creates a unique Case; repeated launches create separate Cases and persist the canonical fixture name/text.
 - Version-controlled SQL migrations under `supabase/migrations/`, applied with `npm run migrate` via server-side `pg`.
 - Case retrieval by unique ID without returning full Markdown text to the browser.
 - Every Case has exactly two Tribunal Run records (`SAME_MODEL` and `MIXED_MODELS`), created atomically with the Case and backfilled for existing Cases.
 - Newly created runs are `PENDING` (no AI execution yet). Unique `(case_id, run_type)` is enforced in PostgreSQL.
 - Tribunal Run lifecycle can persist `PENDING`, `RUNNING`, `SUCCEEDED`, and `FAILED`, including nullable `final_verdict`, `started_at`, `completed_at`, and `failure_reason`. A failed run cannot store a fabricated verdict.
 - Individual Model Call audit rows persist on `model_calls` (one row per actual API attempt) with Case/run association, stage, agent role, attempt, model, status, nullable usage/cost/duration/provider/error fields, and validated JSON only. Duplicate `(run_id, agent_role, attempt)` is rejected; `case_id` must match the run’s Case.
-- Focused upload-validation, Case-persistence, Tribunal Run, lifecycle, and Model Call tests; `test`, `lint`, `typecheck`, `build`, and `migrate` scripts.
+- Focused canonical-creation, Case-persistence, Tribunal Run, lifecycle, and Model Call tests; `test`, `lint`, `typecheck`, `build`, and `migrate` scripts.
 - Settled `SAME_MODEL` and `MIXED_MODELS` run-kind constants.
 - Supabase PostgreSQL TLS with official CA and certificate verification enabled (`certs/prod-ca-2021.crt`).
 - Settled advocate and judge response-contract logical shapes and runtime prompt-composition design (`docs/architecture.md`).
@@ -42,8 +43,8 @@ Completed and verified:
 - Single-run coordinator `executeTribunalRun`: Advocate stage, then Judge stage only after four valid Advocate responses. Reuses existing stage boundaries. A PENDING Run is claimed once by the atomic `markRunning` transition; non-PENDING or duplicate starts make no model requests.
 - Case-level dual-run coordinator `executeCaseTribunals`: resolves the two durable Runs from persistence, starts `SAME_MODEL` and `MIXED_MODELS` concurrently, and keeps their outcomes independent.
 - Persisted results read model under `lib/results`: reconstructs Case metadata, both Runs, validated Advocate/Judge outputs, attempt history, and agent/stage/run/Case token-cost totals from `model_calls`. Each total is a known subtotal plus per-metric completeness. Duplicate successes and inconsistent `SUCCEEDED` Runs fail closed. Does not execute models or replace a persisted `final_verdict`.
-- HTTP execution and results routes: `POST /api/cases/[id]/execute` triggers `executeCaseTribunals` from the persisted charge sheet; `GET /api/cases/[id]/results` returns `getCaseResults`. Upload and Case metadata GET keep their existing contracts.
-- Reviewer UI: upload a `.md` charge sheet, start the Tribunal, wait for the synchronous execute request, then display persisted SAME_MODEL and MIXED_MODELS results. A Case is recoverable at `/cases/[id]` via `GET` results only. The homepage Past Cases area keeps manual known-Case ID entry and also lists the five most recently executed Cases as an MVP convenience, not a Case-management system.
+- HTTP creation, execution, and results routes: `POST /api/cases` creates from T-001 without a request body; `POST /api/cases/[id]/execute` triggers `executeCaseTribunals`; `GET /api/cases/[id]/results` returns `getCaseResults`.
+- Reviewer UI: one homepage action creates a fresh canonical Case and starts both Runs automatically, then displays persisted SAME_MODEL and MIXED_MODELS results. A Case is recoverable at `/cases/[id]` via `GET` results only. The homepage Past Cases area keeps manual known-Case ID entry and also lists the five most recently executed Cases as an MVP convenience, not a Case-management system.
 - Deployment and production host: the app is deployed as a Render Free Web Service (`npm run start`) with GitHub `main` auto-deploy, Supabase transaction-pooler PostgreSQL, and OpenRouter. The accepted production dual-run E2E succeeded. Canonical notes: `docs/deployment.md`.
 
 ## Recommended phase sequence (complete)

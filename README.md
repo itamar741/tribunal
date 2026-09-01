@@ -1,6 +1,6 @@
 # AI Tribunal
 
-Next.js modular monolith for dual AI Tribunal analysis of an uploaded charge sheet.
+Next.js modular monolith for dual AI Tribunal analysis of a fixed canonical charge sheet.
 
 The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Supabase PostgreSQL, OpenRouter). The accepted production dual-run E2E succeeded: both `SAME_MODEL` and `MIXED_MODELS` persisted `NOT_JUSTIFIED`, results survived reload without rerunning models, and duplicate execution is prevented.
 
@@ -26,7 +26,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Past Cases keeps manual retrieval by known Case ID. The same homepage area also lists the five most recently executed Cases as an MVP convenience. That list is not a Case-management system: there is no pagination, search, deletion, renaming, or rerun control.
+The homepage starts a fresh hearing of the server-owned T-001 record with one action; it does not accept file uploads. Past Cases keeps manual retrieval by known Case ID and lists the five most recently executed Cases as a convenience. That list is not a Case-management system: there is no pagination, search, deletion, renaming, or rerun control.
 
 ## Scripts
 
@@ -48,4 +48,4 @@ Past Cases keeps manual retrieval by known Case ID. The same homepage area also 
 
 ## Scope note
 
-MVP implementation is complete: charge-sheet upload, Case and Tribunal Run persistence, Model Call audit, Zod contracts, instructor profiles, runtime prompts, version-controlled OpenRouter assignment, bounded retry, the reusable Tribunal engine, persisted results/accounting, HTTP execute/results routes, and the reviewer UI. The homepage also lists the five most recently executed Cases while keeping manual known-Case retrieval. Production is a Render Free Web Service with auto-deploy from `main`. See [docs/deployment.md](docs/deployment.md) and [docs/implementation-plan.md](docs/implementation-plan.md). Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).
+MVP implementation is complete: canonical Case creation, Case and Tribunal Run persistence, Model Call audit, Zod contracts, instructor profiles, runtime prompts, version-controlled OpenRouter assignment, bounded retry, the reusable Tribunal engine, persisted results/accounting, HTTP execute/results routes, and the reviewer UI. The homepage creates and immediately starts a fresh hearing of T-001; it also lists recent Cases and keeps manual known-Case retrieval. Production is a Render Free Web Service with auto-deploy from `main`. See [docs/deployment.md](docs/deployment.md) and [docs/implementation-plan.md](docs/implementation-plan.md). Canonical model-selection rationale: [docs/model-selection.md](docs/model-selection.md).

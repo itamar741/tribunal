@@ -106,7 +106,7 @@ model_calls
   foreign key (run_id, case_id) references tribunal_runs(id, case_id)
 ```
 
-Validated Markdown text is stored on the Case. The original uploaded file/blob is not.
+Canonical Markdown text is stored on the Case. No uploaded file/blob exists.
 
 Every Case has exactly two Tribunal Runs. They are inserted in the same transaction as the Case. Existing Cases were backfilled by the `tribunal_runs` migration.
 
@@ -122,4 +122,3 @@ Judge and Tribunal Run verdicts are `JUSTIFIED | NOT_JUSTIFIED`. Three valid jud
 Each `model_calls` row is one actual AI API attempt. `SUCCEEDED` means the output passed the applicable runtime response contract; that structured output is stored in `validated_response`. Failed attempts normally store `NULL` there. Unknown usage/cost is `NULL`, never a guessed zero. A provider-reported zero is stored as zero. Prompts, raw model output, hidden reasoning, and provider request payloads are not stored. Case results and token/cost totals are reconstructed from these three tables by `getCaseResults`; aggregates are not stored as separate rows. Each total keeps the known subtotal and a per-metric completeness flag.
 
 Useful indexes: `tribunal_runs(case_id)`, `model_calls(case_id)`. Lookups by Tribunal Run use the unique `(run_id, agent_role, attempt)` index.
-
