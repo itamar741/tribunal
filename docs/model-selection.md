@@ -4,7 +4,7 @@ This is the canonical rationale for the version-controlled OpenRouter model assi
 
 The current selection is **no longer all-free**. SAME_MODEL and two MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1`, `DEFENSE_2`, `PROSECUTION_1`, `JUDGE_1`, and `JUDGE_3` are explicitly paid IDs. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
 
-The accepted production dual-run E2E used this configuration. Both Runs succeeded and persisted `NOT_JUSTIFIED`. Paid MIXED seats exist for reliability, not because the Tribunal requires paid inference. Availability and listed prices remain operational configuration and must be revalidated against `GET /api/v1/models` before a later change.
+The role table below is the current configuration. Later sections preserve dated production evidence and earlier model revisions; statements about what was or was not automatic describe the implementation at that historical point unless a section explicitly states current policy. Paid MIXED seats exist for reliability, not because the Tribunal requires paid inference. Availability and listed prices remain operational configuration and must be revalidated against `GET /api/v1/models` before a later change.
 
 ## Purpose
 
@@ -255,7 +255,7 @@ The MIXED Judge stage then failed closed because two free Judge endpoints were r
 - `JUDGE_2` / `nvidia/nemotron-3-super-120b-a12b:free` succeeded on attempt 1 and was not changed.
 - `JUDGE_3` / `google/gemma-4-26b-a4b-it:free` received HTTP 429 twice. OpenRouter reported Google AI Studio free upstream as temporarily rate-limited.
 
-Those are provider-capacity failures, not application failures. SAME_MODEL and all Advocate assignments were not changed. There is no automatic cross-model fallback.
+Those were provider-capacity failures, not application failures. SAME_MODEL and all Advocate assignments were not changed. At that historical point, automatic cross-model fallback had not yet been implemented; the current bounded recovery policy is documented under **Standby pool** below.
 
 ### Why MIXED `JUDGE_1` is paid GPT-4.1
 
@@ -328,7 +328,7 @@ Currently approved emergency candidates, in recorded order:
 
 1. `google/gemma-4-31b-it:free` — demoted from `MIXED_MODELS` `PROSECUTION_1` after both allowed attempts returned provider 429s in the 2026-08-27 deployed E2E. The ID remains a valid free catalog endpoint.
 2. `cohere/north-mini-code:free` — added on 2026-08-30 after the official catalog confirmed the exact zero-priced, direct model ID and a 256K context window. It exposes no structured-output parameter, so it uses `PROMPT_ONLY` plus JSON parse and Zod validation. It replaces `thinkingmachines/inkling-small:free`, which a deployed web Run proved is restricted to agentic harnesses and is therefore incompatible with Tribunal.
-3. `nvidia/nemotron-3.5-lightning:free` — demoted from `MIXED_MODELS` `DEFENSE_1` after the second deployed E2E: attempt 1 `TIMEOUT`, attempt 2 `MALFORMED_JSON`. Prompt-enforced structure only. Not used automatically.
+3. `nvidia/nemotron-3.5-lightning:free` — demoted from `MIXED_MODELS` `DEFENSE_1` after the second deployed E2E: attempt 1 `TIMEOUT`, attempt 2 `MALFORMED_JSON`. Prompt-enforced structure only; now available only through bounded application recovery.
 4. `inclusionai/ling-3.0-flash-fin:free` — added on 2026-08-30 after public catalog verification: exact zero-priced ID, 262,144-token context, and no `response_format`/`structured_outputs` capability (`PROMPT_ONLY`). It is a bounded recovery candidate, not an OpenRouter router or a primary seat.
 5. `z-ai/glm-5.2:free` — catalog-verified zero-priced 256K candidate with `JSON_SCHEMA`; previously rate-limited primary use remains historical availability evidence, not an automatic exclusion from a bounded recovery pool.
 6. `google/gemma-4-26b-a4b-it:free` — catalog-verified zero-priced 256K candidate with `JSON_OBJECT`; never used as an OpenRouter model router.
@@ -344,7 +344,7 @@ On 2026-08-30, the two slowest/problematic MIXED Advocate assignments were repla
 
 The OpenRouter model pages currently list Mistral Small 3.2 at $0.075/$0.20 per million input/output tokens and Qwen3 30B A3B at approximately $0.048/$0.193 per million during the displayed promotion. These prices and provider performance are operational observations and must be rechecked before a later change.
 
-They exist because free-model availability is volatile. An unavailable primary model must not be silently replaced inside an already-defined Tribunal Run. The normal attempt/retry/failure policy applies. The standby pool is for an explicit future configuration change and a new execution. The new effective configuration must remain auditable.
+They exist because free-model availability is volatile. The application may select one distinct standby model for an unresolved `MIXED_MODELS` seat only after an eligible primary failure. The fallback receives at most two attempts in the current recovery cycle. `SAME_MODEL` never substitutes a model. Every actual model identity and `PRIMARY`/`FALLBACK` source is persisted, so replacement is visible rather than silent.
 
 Do not use OpenRouter’s cross-model `models` fallback array in the Tribunal execution design.
 
@@ -355,24 +355,24 @@ Two different OpenRouter behaviors must stay distinct:
 | Behavior | What changes | Tribunal policy |
 | --- | --- | --- |
 | Same-model provider failover | Model X / Provider A → Model X / Provider B | Acceptable. Concrete model identity is preserved. |
-| Cross-model fallback | Model X → Model Y (including a `models` array) | Not automatic. This changes experimental identity. |
+| Application-controlled fallback | Model X → one version-controlled standby Model Y | Allowed only for an eligible unresolved `MIXED_MODELS` seat; bounded and fully audited. |
+| OpenRouter cross-model router | Model X → provider-selected Model Y through a `models` array | Forbidden; it hides the experimental identity from Tribunal configuration. |
 
 If every provider for a selected free model is unavailable:
 
-- apply the normal attempt/retry/failure policy;
-- do not silently substitute another model;
-- use the standby pool only through an explicit configuration change and a new Case/execution;
-- keep the effective configuration auditable.
+- apply the normal primary attempt/retry policy;
+- for `MIXED_MODELS`, use the application recovery coordinator only when the failure classification is fallback-eligible;
+- select a standby that is not already active and was not previously used in that Run;
+- for `SAME_MODEL`, fail the Run without substitution;
+- keep every effective model identity, source, cycle, attempt, and cost auditable.
 
 Later execution must record the actual model identity returned by OpenRouter so provider failover can be distinguished from an unintended model replacement.
 
 ## Cost rationale
 
-- SAME_MODEL, the other four MIXED seats, and the standby pool remain `:free` IDs and must still list zero prompt/completion prices in the live catalog.
-- MIXED `DEFENSE_1` is the paid ID `openai/gpt-4.1-mini`. On 2026-08-29 the catalog listed `pricing.prompt = 0.0000004` and `pricing.completion = 0.0000016`.
-- MIXED `JUDGE_1` is the paid ID `openai/gpt-4.1`. On 2026-08-29 the catalog listed `pricing.prompt = 0.000002` and `pricing.completion = 0.000008`.
-- MIXED `JUDGE_3` is the paid ID `meta-llama/llama-4-maverick`. On 2026-08-29 the catalog listed `pricing.prompt = 0.0000002` and `pricing.completion = 0.0000008`.
-- Provider-reported usage and cost for those Model Calls are persisted as returned. Execution does not calculate the charge.
+- `SAME_MODEL`, MIXED `PROSECUTION_2`, MIXED `JUDGE_2`, and the standby pool are configured as `:free` IDs and must still list zero prompt/completion prices in the live catalog.
+- The five paid MIXED primaries are `openai/gpt-4.1-mini`, `mistralai/mistral-small-3.2-24b-instruct`, `qwen/qwen3-30b-a3b-instruct-2507`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`.
+- Prices are volatile and must be revalidated before a configuration change. Provider-reported usage and cost for every primary, retry, fallback, and Resume attempt are persisted as returned; execution does not calculate the charge.
 - Free requests remain subject to OpenRouter limits and availability. Capacity, latency, rate limits, and listed prices can change without notice.
 - Zero price on free-configured IDs is a current operational property, not a permanent product guarantee.
 

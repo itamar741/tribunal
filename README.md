@@ -6,6 +6,7 @@ The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Su
 
 ## Docs
 
+- [Course dossier alignment](docs/course-alignment.md)
 - [Project framing](docs/project-framing.md)
 - [Architecture](docs/architecture.md)
 - [Specification](docs/specification.md)
@@ -13,12 +14,13 @@ The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Su
 - [Model selection](docs/model-selection.md)
 - [Database](docs/database.md)
 - [Deployment](docs/deployment.md)
+- [Product backlog](docs/backlog.md)
 
 ## Getting started
 
 ```bash
 cp .env.example .env.local
-# Set DATABASE_URL to a Supabase or local PostgreSQL connection string.
+# Set DATABASE_URL and OPENROUTER_API_KEY in .env.local.
 npm install
 npm run migrate
 npm run dev
@@ -27,6 +29,17 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 The homepage starts a fresh hearing of the server-owned T-001 record with one action; it does not accept file uploads. Past Cases keeps manual retrieval by known Case ID and lists the five most recently executed Cases as a convenience. That list is not a Case-management system: there is no pagination, search, deletion, renaming, or rerun control.
+
+Before opening a pull request, run:
+
+```bash
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
+
+The same verification gate runs in GitHub Actions. PostgreSQL integration tests run when `DATABASE_URL` is available and otherwise skip cleanly; production migrations remain an explicit operator action.
 
 ## Scripts
 

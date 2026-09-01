@@ -4,7 +4,7 @@
 
 This plan recorded the dependency-ordered path to the completed MVP. All twelve phases are complete. It remains a historical planning artifact and does not authorize new implementation by itself.
 
-**2026-09-01 product revision:** the upload flow described in the historical phases below has been superseded. The active product uses the server-owned T-001 fixture, exposes one homepage launch action, creates a fresh Case, and starts both Runs automatically. There is no file-upload UI or upload route.
+**2026-09-01 product revisions:** the upload flow described in the historical phases below has been superseded. The active product uses the server-owned T-001 fixture, exposes one homepage launch action, creates a fresh Case, and starts both Runs automatically. There is no file-upload UI or upload route. A later bounded-recovery revision also superseded historical statements that standby models were not used automatically: eligible unresolved `MIXED_MODELS` seats may now receive one distinct audited fallback per recovery cycle, while `SAME_MODEL` never substitutes a model.
 
 ## MVP status
 
@@ -166,7 +166,7 @@ No real AI call or orchestration should proceed without runtime validators match
 - Completed (Phase 3B): stable identities for two defense advocates, two prosecution advocates, and three judges, linked to instructor profile text without model IDs.
 - Completed (Phase 3B): canonical instructor Case T-001 stored as a project fixture/reference. The dossier is treated as the canonical example, not a complete generic Markdown grammar.
 - Completed (Phase 3C): runtime prompts assembled in application code from the settled layer model (advocate and judge compositions in `docs/architecture.md`). Trusted instructions are separated from untrusted charge-sheet/advocate content. Builders are provider-agnostic and do not include model IDs.
-- Completed (Phase 3D): concrete OpenRouter models chosen ourselves: one model for all seven agents in `SAME_MODEL`; seven different models in `MIXED_MODELS`; standby IDs recorded but not used as automatic fallbacks. Rationale: `docs/model-selection.md`.
+- Completed (Phase 3D): concrete OpenRouter models chosen ourselves: one model for all seven agents in `SAME_MODEL`; seven different primary models in `MIXED_MODELS`; a later bounded-recovery revision connected the standby pool to eligible unresolved MIXED seats. Rationale: `docs/model-selection.md`.
 - Keep model assignment in configuration, not orchestration branches.
 - Test schema acceptance/rejection with valid and invalid examples.
 - Test that `SAME_MODEL` assigns one model to all seven agents and `MIXED_MODELS` assigns seven distinct models.
@@ -386,7 +386,7 @@ Completed: `POST /api/cases/[id]/execute` and `GET /api/cases/[id]/results`. Exe
 
 ## Reviewer UI
 
-Completed: upload → start Tribunal → wait for the synchronous execute request while the browser reads persisted results every three seconds. The two Runs are shown independently as completed seats are saved. Known Cases reopen at `/cases/[id]` without executing models.
+Completed: homepage launch → canonical Case creation → automatic synchronous Tribunal execution while the browser streams transient drafts and reads persisted results every three seconds. The two Runs are shown independently as completed seats are saved. Known Cases reopen at `/cases/[id]` without executing models; failed Runs expose bounded Resume for unresolved seats.
 
 ## Deployment preflight
 

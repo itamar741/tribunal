@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test 'lib/**/*.test.ts'",
+    "test": "tsx --test $(find lib -type f -name '*.test.ts' -print)",
     "typecheck": "tsc --noEmit",
     "migrate": "tsx scripts/migrate.ts",
     "verify:openrouter-slice": "tsx scripts/verify-openrouter-slice.ts",

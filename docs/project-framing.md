@@ -45,17 +45,14 @@ The following are out of scope for the MVP unless explicitly required later:
 - A human-recorded final verdict or approval decision
 - Speculative features beyond the charge-sheet → two Tribunal runs → review flow
 
-## Known open decisions
+## Remaining product decisions
 
-Internal design work still required (not instructor-owned):
+The response contracts, prompt composition, retry/recovery policy, model assignment, persistence model, and Render/Supabase/OpenRouter deployment topology are settled and implemented.
 
-- Exact advocate and judge response-contract fields
-- Runtime prompt composition details
-- Retry/attempt policy for failed model calls (must be settled before multi-agent execution)
-- Past-case listing, authentication, and public/private access beyond retrieval by known Case ID
-- Retention/privacy rules for persisted validated Markdown text
-- Deployment topology details beyond “Next.js app + PostgreSQL (Supabase preferred)”
+Decisions intentionally deferred beyond the course MVP:
 
-Still waiting on an explicit recorded contract:
-
-- The exact Markdown charge-sheet structural contract, so later structural parsing can be implemented without inventing a generic grammar. Instructor Case T-001 is available as the canonical example fixture and is not by itself that grammar.
+- Authentication and authorization for public access.
+- Retention and deletion policy for persisted Cases and Model Call audit data.
+- Search, pagination, naming, and administration for past Cases.
+- Whether measured host limits justify background execution in a later version.
+- A generic charge-sheet format if the product ever expands beyond the fixed T-001 record.
