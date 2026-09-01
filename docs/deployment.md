@@ -11,13 +11,13 @@ This is the actual production topology. GitHub `main` is connected with auto-dep
 Render Free constraints that matter for this MVP:
 
 - The process is `npm run start` (`next start`). The execute route’s `runtime = "nodejs"` and `maxDuration = 800` exports are ignored on Render.
-- Official Render documentation states web-service HTTP responses may take up to 100 minutes ([Render vs Vercel](https://render.com/docs/render-vs-vercel-comparison)). That is sufficient for the bounded synchronous execute ceiling (≤ ~520s).
+- Official Render documentation states web-service HTTP responses may take up to 100 minutes ([Render vs Vercel](https://render.com/docs/render-vs-vercel-comparison)). That covers the current theoretical initial-execution ceiling of roughly 36 minutes, including serialized `MIXED_MODELS` fallbacks.
 - A Free web service spins down after 15 minutes without inbound traffic and may cold-start on the next request. Persistent Case/Run/`model_calls` data remains in Supabase, not on Render’s ephemeral filesystem.
 - Pushes to `main` trigger a new Render deploy.
 
 Do not add Render-specific durable infrastructure such as queues or workers. The app may use the existing read-only results polling and optional SSE response transport for live progress; neither creates background jobs or changes persistence semantics.
 
-**Vercel Pro** remains a documented alternative if the host is later changed: official Fluid compute maximum is 800s ([Configuring Maximum Duration](https://vercel.com/docs/functions/configuring-functions/duration)), and the execute route already exports `maxDuration = 800`. Vercel Hobby (300s maximum) is not sufficient for the bounded worst-case execute duration.
+**Vercel Pro** is not a drop-in host for the full theoretical fallback bound: the documented Fluid compute maximum is 800s ([Configuring Maximum Duration](https://vercel.com/docs/functions/configuring-functions/duration)), which is shorter than the current worst case. The route keeps `maxDuration = 800` for compatibility, but a host move would require measured execution limits or an execution-architecture decision first.
 
 Do not move execution to queues or workers unless a later measured host limit proves the synchronous request cannot finish. SSE is only an optional response transport for the existing synchronous request.
 
@@ -65,21 +65,25 @@ Topology:
 
 - two Runs concurrently;
 - each Run: four Advocates concurrently, then (only if all four succeed) three Judges concurrently;
-- each agent: at most two attempts;
+- each primary or fallback assignment: at most two attempts;
 - per-attempt timeout: 90 seconds (`OPENROUTER_ATTEMPT_TIMEOUT_MS`);
 - retry delay: 0s (invalid output), 1s (timeout / network / 5xx), or up to 60s (`Retry-After`, clamped).
 
 Per-agent bound: `90s + 60s + 90s = 240s`.
 
-One Run bound (Advocate wave then Judge wave): `240s + 240s = 480s`.
+`SAME_MODEL` bound (Advocate wave then Judge wave): `240s + 240s = 480s`.
 
-Case HTTP bound (Runs in parallel): **about 480 seconds**, plus a small persistence/prompt overhead (treat **≤ 520 seconds** as the planning ceiling).
+`MIXED_MODELS` primary attempts use the same two parallel waves. Eligible failed seats then use distinct fallback models. Fallback seats are deliberately serialized to keep every active model unique:
 
-This is not `28 × 90s`. Concurrency collapses the 28 attempts into two sequential waves per Run, and the two Runs overlap.
+- Advocates: `240s` primary wave + up to `4 × 240s` fallback seats = `1,200s`.
+- Judges: `240s` primary wave + up to `3 × 240s` fallback seats = `960s`.
+- Complete MIXED Run: up to `2,160s`, or about **36 minutes**, plus small persistence/prompt overhead.
+
+The two Runs overlap, so the MIXED bound dominates the initial Case request. A normal Case has 14 calls. The bounded initial maximum is 42 attempts: 14 SAME primary attempts, 14 MIXED primary attempts, and 14 MIXED fallback attempts.
 
 **Normal shape (no measurement claimed):** one successful attempt per agent, typical model latency tens of seconds, both Runs overlapping → often **1–3 minutes**.
 
-**Worst-case bound:** every agent in the critical path uses a full timeout or a 60s `Retry-After` plus a second full timeout → **~8 minutes**. Render’s documented HTTP allowance covers that. On a Vercel Pro alternative the existing `maxDuration = 800` would also cover it.
+**Worst-case planning bound:** every primary and fallback assignment on the successful critical path uses a full timeout or a 60s `Retry-After` plus a second full timeout → approximately **36 minutes**. Render’s documented allowance covers that bound.
 
 If the host kills the request first, persisted `RUNNING` / `FAILED` rows and any completed `model_calls` remain the source of truth. Reload `/cases/{id}` must only `GET` results.
 
@@ -97,7 +101,9 @@ There is no writable-disk assumption. There is no process-local state required f
 
 ## OpenRouter models
 
-SAME_MODEL and four MIXED seats remain `:free` endpoints. MIXED `DEFENSE_1`, `JUDGE_1`, and `JUDGE_3` are the paid IDs `openai/gpt-4.1-mini`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`. Availability, latency, rate limits, and listed prices are external and volatile. Retries lengthen the HTTP request. Provider failure is an expected Tribunal outcome (`FAILED` Run, no invented verdict). Provider-reported cost is audited. There is no automatic cross-model fallback. Do not change model selection as a deploy workaround.
+`SAME_MODEL` uses the free `minimax/minimax-m3:free` endpoint for every seat. `MIXED_MODELS` currently has five paid primaries (`openai/gpt-4.1-mini`, `mistralai/mistral-small-3.2-24b-instruct`, `qwen/qwen3-30b-a3b-instruct-2507`, `openai/gpt-4.1`, and `meta-llama/llama-4-maverick`) and two free primaries (`minimax/minimax-m3:free` and `nvidia/nemotron-3-super-120b-a12b:free`).
+
+After an eligible primary failure, the application may assign one distinct version-controlled standby model to an unresolved `MIXED_MODELS` seat. Each fallback has the same two-attempt bound, is recorded as `FALLBACK`, and contributes to accounting. `SAME_MODEL` never substitutes a model. OpenRouter's cross-model router/`models` array is not used. Availability, latency, rate limits, and prices are external and volatile; provider-reported usage and cost remain authoritative.
 
 ## Deploy procedure
 
@@ -108,7 +114,7 @@ The application is already deployed on Render Free with auto-deploy from `main`.
 3. Push `main`. Wait for the Render deploy to finish before starting a new Case.
 4. Smoke-check `/` if needed. A new dual-run Case is a separate, once-only live E2E.
 
-## Production E2E (completed)
+## Historical production E2E evidence
 
 The Tribunal MVP completed a successful deployed dual-run E2E on this topology: GitHub `main`, Render Free Web Service, Supabase PostgreSQL transaction pooler, and OpenRouter.
 
@@ -129,6 +135,6 @@ Persisted Case totals: 16 attempts; known 39,600 input / 13,365 output / 52,965 
 
 Reload of deployed `/cases/{id}` reconstructed both `SUCCEEDED` / `NOT_JUSTIFIED` Runs from persistence. No model execution and no additional Model Call rows.
 
-The UI does not expose **Start Tribunal** once the Case is no longer `PENDING`. Server-side duplicate protection is verified in automated tests: atomic `PENDING → RUNNING` claim, no re-claim of `RUNNING` / `SUCCEEDED` / `FAILED`, concurrent callers execute each durable Run at most once, and rejected duplicates create zero new Model Call rows. A second live execute was not repeated for this evidence.
+The current UI starts a fresh Case only from the homepage and exposes no manual Start action in the Case workspace. Server-side duplicate protection is verified in automated tests: atomic `PENDING → RUNNING` claim, no re-claim of `RUNNING` / `SUCCEEDED` / `FAILED`, concurrent callers execute each durable Run at most once, and rejected duplicates create zero new Model Call rows. A second live execute was not repeated for this evidence.
 
-Do not repeat this live E2E for curiosity. If a later host returns a duration timeout (504) before POST completes, inspect persisted Run state, do not click Start again, and do not introduce queues until that measurement is recorded.
+Do not repeat a live E2E for curiosity. If a later host returns a duration timeout (504) before POST completes, inspect persisted Run state and use only the supported Resume action for a genuinely failed Run. Do not create another Case merely to bypass an unknown in-flight state, and do not introduce queues until measurements justify the change.

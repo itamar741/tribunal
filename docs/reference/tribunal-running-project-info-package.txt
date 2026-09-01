@@ -81,18 +81,18 @@ ________________
 6. Research record and source links
 The profiles derive judicial convictions, interpretive habits, and writing style from the reasoning in the listed Hebrew opinions. They do not reproduce the judges’ private personalities or claim that any judge would decide the fictional case in a particular way. “Most famous” is used here in the practical sense of landmark opinions commonly associated with the judge and useful for distinguishing judicial method.
 Aharon Barak
-CA 6821/93; LCA 1908/94, 3363/94, United Mizrahi Bank v. Migdal Cooperative Village (1995). Hebrew scan of the reported decision; Barak and Shamgar opinions read separately. Open source
-HCJ 5100/94, Public Committee Against Torture in Israel v. Government of Israel (1999). Hebrew case page and ruling record from HaMoked. Open source
-HCJ 2056/04, Beit Sourik Village Council v. Government of Israel (2004). Hebrew ruling PDF. Open source
+CA 6821/93; LCA 1908/94, 3363/94, United Mizrahi Bank v. Migdal Cooperative Village (1995). Hebrew scan of the reported decision; Barak and Shamgar opinions read separately. https://dyoma.co.il/images/Documents%20-%20articles/CA%206821%2093%2C%20United%20Mizrahi%20Bank.pdf
+HCJ 5100/94, Public Committee Against Torture in Israel v. Government of Israel (1999). Hebrew case page and ruling record from HaMoked. https://hamoked.org.il/document.php?dID=260
+HCJ 2056/04, Beit Sourik Village Council v. Government of Israel (2004). Hebrew ruling PDF. https://hamoked.org.il/files/2010/6520.pdf
 Menachem Elon
-CA 546/78, Bank Kupat Am v. Hendels (1980); FH 13/80 (1981). Hebrew Ministry of Justice study with case text, citations, and the Barak–Elon interpretive dispute; checked against the reported-case summary. Open source
-CA 294/91, Jerusalem Community Burial Society v. Kestenbaum (1992). Hebrew ruling record; Elon’s dissent distinguished from the majority. Open source
-HCJ 1635/90, Jarzhevski v. Prime Minister (1991), part 1. Full Hebrew reproduction, first part. Open source
-HCJ 1635/90, Jarzhevski v. Prime Minister (1991), part 2. Full Hebrew reproduction, second part. Open source
+CA 546/78, Bank Kupat Am v. Hendels (1980); FH 13/80 (1981). Hebrew Ministry of Justice study with case text, citations, and the Barak–Elon interpretive dispute; checked against the reported-case summary. https://www.gov.il/BlobFolder/reports/roots_1981/he/Roots-1981-1.pdf
+CA 294/91, Jerusalem Community Burial Society v. Kestenbaum (1992). Hebrew ruling record; Elon’s dissent distinguished from the majority. https://hamoked.org.il/document.php?dID=2300
+HCJ 1635/90, Jarzhevski v. Prime Minister (1991), part 1. Full Hebrew reproduction, first part. https://4ulaw.blogspot.com/2018/08/163590-1-749-1991_32.html
+HCJ 1635/90, Jarzhevski v. Prime Minister (1991), part 2. Full Hebrew reproduction, second part. https://4ulaw.blogspot.com/2018/08/163590-1-749-1991_29.html
 Meir Shamgar
-CA 44/76, Ata Textile Co. v. Schwartz (1976). Hebrew Ministry of Justice discussion with reported-page references and key reasoning; checked against the Hebrew case overview. Open source
-HCJ 428/86, Barzilai v. Government of Israel (1986). Full Hebrew reproduction of the joined pardon petitions. Open source
-CA 6821/93; LCA 1908/94, 3363/94, United Mizrahi Bank v. Migdal Cooperative Village (1995). Hebrew scan; Shamgar’s opinion read as a separate work. Open source
+CA 44/76, Ata Textile Co. v. Schwartz (1976). Hebrew Ministry of Justice discussion with reported-page references and key reasoning; checked against the Hebrew case overview. https://www.gov.il/BlobFolder/reports/roots_2004_2/he/Roots-2004.pdf
+HCJ 428/86, Barzilai v. Government of Israel (1986). Full Hebrew reproduction of the joined pardon petitions. https://halemo.com/edoar/0091/barzilai_vs_state.htm
+CA 6821/93; LCA 1908/94, 3363/94, United Mizrahi Bank v. Migdal Cooperative Village (1995). Hebrew scan; Shamgar’s opinion read as a separate work. https://dyoma.co.il/images/Documents%20-%20articles/CA%206821%2093%2C%20United%20Mizrahi%20Bank.pdf
 Research qualification
 SOURCE QUALITY
 Open Hebrew scans or full reproductions were retained locally for Bank Mizrahi, Jarzhevski, and Barzilai, with additional Hebrew research copies for Hendels and Ata. HaMoked’s ruling pages for Torture, Beit Sourik, and Kestenbaum were read online; two direct file downloads were blocked by the host’s certificate/access configuration. The links above preserve the review path.

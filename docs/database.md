@@ -48,7 +48,7 @@ The runner:
 
 This works against a fresh Supabase/PostgreSQL database and against later local/dev databases. Do not make dashboard-only schema edits.
 
-## Current schema (Phase 4A)
+## Current schema
 
 ```text
 cases
@@ -69,6 +69,8 @@ tribunal_runs
   started_at timestamptz
   completed_at timestamptz
   failure_reason text
+  recovery_cycle integer not null default 0
+    check (recovery_cycle >= 0)
   created_at timestamptz not null default now()
   unique (case_id, run_type)
   unique (id, case_id)
@@ -88,6 +90,10 @@ model_calls
   attempt smallint not null
     check (attempt in (1, 2))
   model text not null
+  model_source text not null default 'PRIMARY'
+    check (model_source in ('PRIMARY', 'FALLBACK'))
+  recovery_cycle integer not null default 1
+    check (recovery_cycle >= 1)
   status text not null
     check (status in ('SUCCEEDED', 'FAILED'))
   input_tokens integer
@@ -101,8 +107,13 @@ model_calls
   validated_response jsonb
   error_type text
   error_message text
+  failure_classification text
+    check (failure_classification is null or failure_classification in (
+      'RATE_LIMITED', 'TEMPORARY_PROVIDER_ERROR', 'INVALID_OUTPUT',
+      'MODEL_UNAVAILABLE', 'AUTH_OR_CONFIGURATION_ERROR', 'SYSTEM_ERROR'
+    ))
   created_at timestamptz not null default now()
-  unique (run_id, agent_role, attempt)
+  unique (run_id, agent_role, recovery_cycle, model_source, attempt)
   foreign key (run_id, case_id) references tribunal_runs(id, case_id)
 ```
 
@@ -117,8 +128,10 @@ Run lifecycle:
 - `SUCCEEDED`: required agents completed and a valid `final_verdict` (`JUSTIFIED` or `NOT_JUSTIFIED`) exists.
 - `FAILED`: execution terminated according to the documented failure policy. `failure_reason` is stored; `final_verdict` must be null.
 
+`recovery_cycle` starts at `0` on a newly created Run. An atomic Resume claim increments it and moves exactly one `FAILED` Run back to `RUNNING`; concurrent or stale Resume requests are rejected. Previously validated seats and all Model Call history remain intact.
+
 Judge and Tribunal Run verdicts are `JUSTIFIED | NOT_JUSTIFIED`. Three valid judge verdicts are required; a 2-of-3 majority determines the run’s final verdict.
 
-Each `model_calls` row is one actual AI API attempt. `SUCCEEDED` means the output passed the applicable runtime response contract; that structured output is stored in `validated_response`. Failed attempts normally store `NULL` there. Unknown usage/cost is `NULL`, never a guessed zero. A provider-reported zero is stored as zero. Prompts, raw model output, hidden reasoning, and provider request payloads are not stored. Case results and token/cost totals are reconstructed from these three tables by `getCaseResults`; aggregates are not stored as separate rows. Each total keeps the known subtotal and a per-metric completeness flag.
+Each `model_calls` row is one actual AI API attempt. `model_source` distinguishes the configured `PRIMARY` from an application-selected `FALLBACK`; `recovery_cycle` groups attempts from the initial execution and later Resume cycles. `SUCCEEDED` means the output passed the applicable runtime response contract; that structured output is stored in `validated_response`. Failed attempts normally store `NULL` there and may include a safe normalized `failure_classification`. Unknown usage/cost is `NULL`, never a guessed zero. A provider-reported zero is stored as zero. Prompts, raw model output, hidden reasoning, and provider request payloads are not stored. Case results and token/cost totals are reconstructed from these three tables by `getCaseResults`; aggregates are not stored as separate rows. Each total keeps the known subtotal and a per-metric completeness flag.
 
-Useful indexes: `tribunal_runs(case_id)`, `model_calls(case_id)`. Lookups by Tribunal Run use the unique `(run_id, agent_role, attempt)` index.
+Useful indexes: `tribunal_runs(case_id)`, `model_calls(case_id)`, and `model_calls(run_id, agent_role, recovery_cycle, model_source, attempt)`. The last index also enforces uniqueness for each auditable attempt identity.

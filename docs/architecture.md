@@ -154,7 +154,7 @@ The instructor dossier's Section 6 research record (Hebrew opinions and source l
 
 The instructor source package is preserved at `docs/reference/tribunal-running-project-info-package.txt` as documentation/provenance only. Runtime code must not import or read that file. Do not duplicate that dossier across documents.
 
-The T-001 fixture preserves the original dossier scope note that the three opinions are not combined into one verdict. That line is superseded for this project by the later instructor clarification already recorded here: each judge returns `JUSTIFIED` or `NOT_JUSTIFIED`; all three valid opinions are required; a two-of-three majority is the final verdict of each Tribunal Run.
+Each Judge returns one independently validated `JUSTIFIED` or `NOT_JUSTIFIED` opinion with reasons. All three valid opinions are required before the Run coordinator records its final result.
 
 ## Centralized response contracts
 
@@ -391,6 +391,8 @@ model_calls
   agent_role DEFENSE_1 | DEFENSE_2 | PROSECUTION_1 | PROSECUTION_2 | JUDGE_1 | JUDGE_2 | JUDGE_3
   attempt 1 | 2
   model text
+  model_source PRIMARY | FALLBACK
+  recovery_cycle integer >= 1
   status SUCCEEDED | FAILED
   input_tokens / output_tokens / total_tokens nullable
   input_cost / output_cost / total_cost nullable numeric
@@ -398,13 +400,14 @@ model_calls
   provider_call_id nullable
   validated_response nullable jsonb
   error_type / error_message nullable
+  failure_classification nullable
   created_at timestamptz
-  unique (run_id, agent_role, attempt)
+  unique (run_id, agent_role, recovery_cycle, model_source, attempt)
 ```
 
 `case_id` must match the Case owned by `run_id`; this is enforced with a composite foreign key `(run_id, case_id) → tribunal_runs(id, case_id)`.
 
-A successful Model Call means the output passed the applicable runtime response contract. `validated_response` stores only that structured output. Failed calls normally store `NULL` there. Prompts, raw/malformed model output, hidden reasoning, and provider request payloads are not persisted.
+A successful Model Call means the output passed the applicable runtime response contract. `validated_response` stores only that structured output. Failed calls normally store `NULL` there. `model_source` and `recovery_cycle` preserve primary/fallback provenance across Resume cycles; `failure_classification` stores only a safe normalized category. Prompts, raw/malformed model output, hidden reasoning, and provider request payloads are not persisted.
 
 Unknown usage/cost is `NULL`, never falsely stored as zero. A provider-reported zero is a known zero. Agent, stage, run, and Case totals are calculated from these rows by `getCaseResults`; this table remains the source data. Each aggregatable metric is `{ value, complete }`: `value` is the sum of known non-null contributions, and `complete` is false when any contributing attempt left that metric unknown. Missing values are not estimated. Completeness is per metric. An empty attempt set is `{ value: 0, complete: true }` with `attemptCount: 0`.
 
@@ -456,7 +459,7 @@ GET  /api/cases/{id}/results    → getCaseResults (read-only)
 - `GET /api/cases/{id}/results` is read-only. It never executes a model or mutates Run state. Charge-sheet text is omitted. There is no Case-level combined verdict.
 - Invalid Case ID is 400; missing Case is 404; missing OpenRouter or database configuration is 503; invalid durable topology is 409; persisted integrity failure is 500 with `INTEGRITY_VIOLATION`. Unexpected failures return a safe 500 without secrets, stack traces, prompts, or raw provider payloads.
 - Keep execution in the synchronous Next.js route. The browser may poll the existing read-only results endpoint or request the optional SSE response transport to reveal transient progress and already-persisted seats. Neither transport creates a background job or changes the durable source of truth.
-- A complete Case can include 14 minimum model calls, up to 28 attempts with retries, and provider `Retry-After` delays. Host request-duration limits must be verified against that bound before production deployment. SSE remains attached to the bounded synchronous request; do not introduce fire-and-forget, queue, worker, or additional durable background infrastructure until measurements require it.
+- A complete initial Case has 14 model calls when every primary succeeds on attempt 1. The bounded maximum is 42 attempts: up to 14 in `SAME_MODEL`, plus up to 14 primary and 14 fallback attempts in `MIXED_MODELS`. Later user-triggered Resume cycles are separately bounded and auditable. Host request-duration limits must be verified against the serialized fallback bound before production deployment. SSE remains attached to the synchronous request; do not introduce fire-and-forget, queue, worker, or additional durable background infrastructure until measurements require it.
 - Regardless of transport, idempotency and per-attempt auditing must prevent accidental duplicate calls and hidden cost.
 
 ## Failure handling and retry policy
@@ -467,12 +470,15 @@ Retry/attempt behavior is settled below. Bounded runtime retry for a single repr
 
 ### Maximum attempts
 
-Each AI agent may make at most **2 attempts**: 1 initial attempt and 1 retry. Unbounded retries are forbidden.
+Each model assignment for one seat may make at most **2 attempts**: 1 initial attempt and 1 retry. `MIXED_MODELS` may then assign one eligible, distinct fallback to that unresolved seat for at most 2 more attempts in the same recovery cycle. `SAME_MODEL` never substitutes a model. Unbounded retries are forbidden.
 
-A normal Tribunal Run has 7 model calls. Theoretical maxima:
+A normal Tribunal Run has 7 successful primary calls. Initial-execution maxima:
 
-- 14 API attempts per Tribunal Run
-- 28 API attempts per Case across both Tribunal Runs
+- `SAME_MODEL`: 14 attempts
+- `MIXED_MODELS`: 28 attempts (14 primary + 14 fallback)
+- complete Case: 42 attempts across both Runs
+
+Each explicit Resume starts a new atomic recovery cycle and executes only unresolved seats. It does not reset or hide the prior bound, successful outputs, attempts, or cost.
 
 ### Retryable failures
 

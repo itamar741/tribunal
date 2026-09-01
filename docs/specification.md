@@ -58,9 +58,11 @@ The MVP is complete. The following criteria were observed in automated tests and
 2. `final_verdict`, when present, is exactly `JUSTIFIED` or `NOT_JUSTIFIED`; a `FAILED` run has no final verdict.
 3. Existing Cases and Tribunal Runs remain valid after the lifecycle migration.
 4. Every actual AI attempt can be stored as one `model_calls` row with Case, Tribunal Run, stage, agent role, attempt (1 or 2), model, status (`SUCCEEDED` or `FAILED`), nullable usage/cost/duration/provider/error fields, and nullable validated JSON.
-5. Duplicate `(run_id, agent_role, attempt)` rows are rejected; `case_id` cannot disagree with the Case belonging to `run_id`.
+5. Duplicate `(run_id, agent_role, recovery_cycle, model_source, attempt)` rows are rejected; `case_id` cannot disagree with the Case belonging to `run_id`.
 6. Unknown usage/cost is stored as null, not zero. Prompts and raw model output are not stored.
 7. Repository operations can mark a run `RUNNING`, `SUCCEEDED` with a final verdict, or `FAILED` with a failure reason, and can insert/retrieve Model Calls for a run or Case.
+8. `MIXED_MODELS` may use one distinct version-controlled fallback per unresolved seat after an eligible primary failure; `SAME_MODEL` never substitutes a model.
+9. Resume atomically claims one failed Run, preserves validated seats and audit history, and starts a new recovery cycle only for unresolved seats.
 
 ## 3. Architectural guidance
 
@@ -111,4 +113,4 @@ Validate against observable criteria:
 | Partial Tribunal failure | Some agents succeed, others fail | Run must not silently produce a “successful” majority from incomplete/invalid data |
 | Retry causing uncontrolled extra model calls or cost | Repeated failures amplify spend and duplicate work | At most two attempts per agent; see `docs/architecture.md` |
 
-Do not invent a generic charge-sheet structural contract from the T-001 example. Advocate and judge logical contracts are settled in `docs/architecture.md` and implemented as Zod schemas under `lib/ai/contracts/`. The T-001 fixture preserves an original dossier scope note that the three opinions are not combined; the active requirement remains the later two-of-three majority clarification in `docs/architecture.md`.
+Do not invent a generic charge-sheet structural contract from the T-001 example. Advocate and judge logical contracts are settled in `docs/architecture.md` and implemented as Zod schemas under `lib/ai/contracts/`.
