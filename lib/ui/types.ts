@@ -139,7 +139,7 @@ export type ApiErrorResponse = {
   error: string;
 };
 
-export type UploadSuccessResponse = {
+export type CreateCaseSuccessResponse = {
   ok: true;
   caseId: string;
   fileName: string;

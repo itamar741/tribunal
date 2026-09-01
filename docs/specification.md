@@ -4,7 +4,7 @@ Observable behavior for the product. Implementation details belong in architectu
 
 ## 1. Goal and reason
 
-**Goal:** Let a human reviewer submit one charge sheet file and obtain two comparable Tribunal analyses of that charge sheet: one using a single shared model for all agents, and one using a distinct model per agent.
+**Goal:** Let a human reviewer start a fresh hearing of the fixed T-001 charge sheet with one homepage action and obtain two comparable Tribunal analyses: one using a single shared model for all agents, and one using a distinct model per agent.
 
 **Reason:** Holding the tribunal procedure constant while varying only model assignment makes it possible to review how model choice affects advocacy, judging, and majority outcomes for the same charge sheet.
 
@@ -12,10 +12,10 @@ Observable behavior for the product. Implementation details belong in architectu
 
 The MVP is complete. The following criteria were observed in automated tests and the accepted production dual-run E2E:
 
-1. The application presents a path to submit a charge sheet file as the only user-provided input.
-2. Only Markdown `.md` charge sheets are accepted (case-insensitive extension); other formats are rejected visibly.
-3. Every valid upload creates a new Case with a unique ID and stores the original file name.
-4. Uploading identical content again creates another Case with another unique ID; the MVP does not deduplicate uploads.
+1. The homepage presents one primary action that creates and starts a hearing of the server-owned canonical T-001 record.
+2. The UI exposes no file upload or editable charge-sheet content.
+3. Every launch creates a new Case with a unique ID and the canonical fixture name.
+4. Repeated launches create separate Cases; the MVP does not deduplicate them.
 5. A persisted Case can be retrieved by its unique ID without rerunning the Tribunal.
 6. For each case, exactly two Tribunal runs execute: one `SAME_MODEL` and one `MIXED_MODELS`.
 7. Both runs follow the same stage order: advocates complete before judges start; four advocates; then three judges; then a majority verdict for that run.
@@ -32,13 +32,13 @@ The MVP is complete. The following criteria were observed in automated tests and
 
 **Charge-sheet Case persistence phase success:**
 
-1. A reviewer can submit one `.md` charge sheet through the UI.
-2. The server independently validates: file present, single file, `.md` extension (case-insensitive; not MIME-only), 1 MB or smaller, valid UTF-8 (malformed bytes rejected, not replaced), non-empty/non-whitespace content. Markdown is not parsed or rendered.
-3. Every valid upload creates a new Case with a database-generated unique ID, stored original file name, stored validated Markdown text, and creation timestamp.
-4. Identical content uploaded again creates another Case with another ID; there is no deduplication.
-5. The original uploaded file/blob is not stored.
-6. Valid uploads return a structured success response (status, Case ID, file name, character count) without echoing full file contents.
-7. Invalid uploads return a structured error, create no Case, and are shown as failures in the UI.
+1. A reviewer can convene T-001 through one homepage action without selecting a file.
+2. The server reads the fixed UTF-8 fixture from the deployed project; the browser sends no charge-sheet content.
+3. Every launch creates a new Case with a database-generated unique ID, canonical fixture name, canonical Markdown text, and creation timestamp.
+4. Repeated launches create separate Cases; there is no deduplication.
+5. No uploaded file/blob exists or is stored.
+6. Successful creation returns Case metadata without echoing full charge-sheet contents.
+7. Creation or canonical-source failures are shown visibly and do not start a Tribunal.
 8. A Case can be retrieved by unique ID without rerunning processing; unknown IDs are reported as not found; full Markdown text is not returned to the browser.
 9. Focused validation and Case-persistence tests, lint, typecheck, and production build succeed.
 
@@ -65,9 +65,8 @@ The MVP is complete. The following criteria were observed in automated tests and
 ## 3. Architectural guidance
 
 - Use a Next.js modular monolith (UI + server in one project).
-- Accept only `.md` charge sheets as user input (valid UTF-8, 1 MB maximum; do not parse/render Markdown in the upload phase); keep upload transport separate from validation/read (`lib/charge-sheet`) and from later Tribunal stages.
-- Treat the Markdown charge sheet as structured input. Instructor Case T-001 is the canonical example fixture (`fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`); it is not a complete generic Markdown grammar. Persist validated Markdown text unchanged until a machine-readable structural contract is explicitly recorded.
-- Persist validated Markdown text and the original file name on a new unique Case for every successful upload; do not store the original file/blob; do not deduplicate.
+- Use the server-owned T-001 fixture (`fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`) as the only charge sheet. Do not expose file upload or editable Case content.
+- Persist that canonical Markdown text and fixture name on a new unique Case for every launch; do not deduplicate.
 - Create exactly one `SAME_MODEL` and one `MIXED_MODELS` Tribunal Run with each Case, in the same transaction; enforce unique `(case_id, run_type)` in PostgreSQL.
 - Use PostgreSQL (Supabase preferred) with version-controlled SQL migrations and server-side `pg` access; do not introduce an ORM without an explicit requirement.
 - Keep file processing, AI calls, prompts, profiles, model configuration, validation, and cost calculation on the server.
@@ -88,8 +87,8 @@ The MVP is complete. The following criteria were observed in automated tests and
 
 Validate against observable criteria:
 
-- **Upload:** missing file, non-`.md` (including `.txt`), empty, whitespace-only, over 1 MB, and malformed UTF-8 charge sheets are rejected; valid `.md` creates a unique Case with structured success feedback.
-- **Manual:** upload path is clear; both run majority verdicts are reviewable when implemented.
+- **Launch:** one click creates a unique canonical Case with no request body and begins both Runs after navigation.
+- **Manual:** no upload control is present; both Run majority verdicts remain reviewable.
 - **Contract:** advocate/judge responses fail closed when they do not match the settled central schemas in `docs/architecture.md`.
 - **Run integrity:** a run without successful contracted judge outputs does not present a successful majority verdict.
 - **Majority vote:** given three valid judge votes, the run verdict is `JUSTIFIED` iff at least two are `JUSTIFIED`, otherwise `NOT_JUSTIFIED` when at least two are `NOT_JUSTIFIED`. That verdict is the run’s final output. A permanently failed judge yields no majority.
@@ -105,7 +104,7 @@ Validate against observable criteria:
 
 | Pitfall | Observable risk | Expected handling direction |
 | --- | --- | --- |
-| Invalid or unsupported uploaded file | Non-`.md`, missing, empty, whitespace-only, over 1 MB, or malformed UTF-8 input | Reject or fail visibly before Tribunal execution; do not persist a Case |
+| Canonical fixture unavailable or empty | The server cannot load reliable Case content | Fail visibly before Tribunal execution; do not persist a Case |
 | Charge sheet cannot be processed | No reliable case content for agents | Fail visibly; do not invent case facts |
 | Model timeout | Missing agent output | Record failure; do not treat as a valid contracted response |
 | Malformed model response | Output does not match central contract | Validation failure; never coerce into a valid verdict |

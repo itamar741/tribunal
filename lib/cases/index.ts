@@ -3,8 +3,11 @@
  * Never import this module from client components.
  */
 
-export { createCaseFromUpload } from "./create-from-upload";
-export type { CreateCaseFromUploadResult } from "./create-from-upload";
+export {
+  createCanonicalCase,
+  loadCanonicalChargeSheet,
+} from "./create-canonical-case";
+export type { CanonicalChargeSheetSource } from "./create-canonical-case";
 export { isCaseId } from "./id";
 export { InMemoryCaseRepository } from "./memory-repository";
 export { PostgresCaseRepository } from "./postgres-repository";

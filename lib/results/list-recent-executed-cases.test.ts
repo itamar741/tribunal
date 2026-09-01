@@ -98,7 +98,7 @@ describe("listRecentExecutedCases", () => {
     );
   });
 
-  it("excludes Cases that were uploaded and never started", async () => {
+  it("excludes Cases that were created and never started", async () => {
     const source = new MemoryRecentCasesSource();
     source.add(
       memoryCase(

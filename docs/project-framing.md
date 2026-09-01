@@ -2,11 +2,11 @@
 
 ## Problem statement
 
-A human reviewer needs a structured way to examine a single uploaded charge sheet through two parallel AI Tribunal analyses: one where all agents share the same model, and one where each agent uses a different model. Both analyses must follow the same tribunal procedure so differences can be attributed to model configuration rather than workflow divergence.
+A human reviewer needs a structured way to examine the fixed canonical T-001 charge sheet through two parallel AI Tribunal analyses: one where all agents share the same model, and one where each agent uses a different model. Both analyses must follow the same tribunal procedure so differences can be attributed to model configuration rather than workflow divergence.
 
 ## Primary user
 
-A human reviewer who uploads exactly one charge sheet file and later reviews the two Tribunal run majority verdicts.
+A human reviewer who starts a fresh hearing from the homepage and later reviews the two Tribunal Run majority verdicts.
 
 ## Stakeholders
 
@@ -18,8 +18,8 @@ A human reviewer who uploads exactly one charge sheet file and later reviews the
 
 The MVP is complete. For the overall MVP (across phases), done means:
 
-- A reviewer can upload a Markdown (`.md`) charge sheet file as the sole user input.
-- Every successful upload creates a new Case with a unique ID and stores the original file name; identical uploads create separate Cases and there is no MVP deduplication.
+- A reviewer can start the server-owned T-001 charge sheet from one homepage action; no file upload is exposed.
+- Every launch creates a new Case with a unique ID and stores the canonical fixture name; repeated launches create separate Cases and there is no MVP deduplication.
 - The system creates a case and executes two Tribunal runs in parallel: `SAME_MODEL` and `MIXED_MODELS`.
 - Both runs use one reusable Tribunal engine; differences are configuration only.
 - Each run completes advocate stage then judge stage, then produces its own majority verdict (`JUSTIFIED` if at least two of three judges vote `JUSTIFIED`; `NOT_JUSTIFIED` if at least two vote `NOT_JUSTIFIED`).
@@ -31,7 +31,7 @@ The MVP is complete. For the overall MVP (across phases), done means:
 - Results of both runs are shown to the human reviewer.
 - A persisted Case can be retrieved later by its unique Case ID without rerunning the Tribunal.
 
-Charge-sheet upload validation and Case persistence are done when a reviewer can submit one `.md` file, the server authoritatively validates UTF-8 Markdown of 1 MB or less, a new unique Case is stored with the original file name and validated text, and the UI reports the Case ID or an explicit failure — without Tribunal orchestration or AI.
+Canonical Case creation and persistence are done when a reviewer can launch T-001, the server reads the repository fixture without browser-supplied Case content, a new unique Case is stored with its canonical name and text, and the UI reports an explicit creation failure when needed.
 
 ## Out of scope
 

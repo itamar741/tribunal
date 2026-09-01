@@ -1,5 +1,5 @@
 import { AppHeader } from "@/components/AppHeader";
-import { ChargeSheetUploadForm } from "@/components/ChargeSheetUploadForm";
+import { TribunalLaunchPanel } from "@/components/TribunalLaunchPanel";
 import { OpenCaseForm } from "@/components/OpenCaseForm";
 
 export default function Home() {
@@ -17,12 +17,13 @@ export default function Home() {
             <span className="text-sm">◆</span>
           </div>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-[#cdbd9e] sm:text-base">
-            Enter one charge sheet into the record. Two independent councils
-            will hear the same facts and deliver their verdicts side by side.
+            The canonical charge is already entered into the record. Convene
+            two independent councils to hear the same facts and deliver their
+            verdicts side by side.
           </p>
         </div>
         <div className="grid items-start gap-7 lg:grid-cols-[minmax(0,1.25fr)_minmax(19rem,0.75fr)]">
-          <ChargeSheetUploadForm />
+          <TribunalLaunchPanel />
           <OpenCaseForm />
         </div>
       </main>
