@@ -4,7 +4,7 @@
 
 This plan recorded the dependency-ordered path to the completed MVP. All twelve phases are complete. It remains a historical planning artifact and does not authorize new implementation by itself.
 
-**2026-09-01 product revisions:** the upload flow described in the historical phases below has been superseded. The active product uses the server-owned T-001 fixture, exposes one homepage launch action, creates a fresh Case, and starts both Runs automatically. There is no file-upload UI or upload route. A later bounded-recovery revision also superseded historical statements that standby models were not used automatically: eligible unresolved `MIXED_MODELS` seats may now receive one distinct audited fallback per recovery cycle, while `SAME_MODEL` never substitutes a model.
+**2026-09-02 product revisions:** the upload flow described in the historical phases below has been superseded. The active product uses the server-owned T-001 fixture, exposes one homepage launch action, creates a fresh Case, and starts both Runs automatically. There is no file-upload UI or upload route. A later bounded-recovery revision also superseded historical statements that standby models were not used automatically: eligible unresolved `MIXED_MODELS` seats may now receive one distinct audited fallback per recovery cycle, while `SAME_MODEL` never substitutes a model. Current open work is tracked only in `docs/backlog.md`.
 
 ## MVP status
 
@@ -677,6 +677,4 @@ Intentionally not implemented. Do not treat these as unfinished MVP phases:
 - A recorded generic Markdown charge-sheet structural grammar
 - A human-recorded final verdict or approval decision
 - Analytics dashboards, full-text history search, and exports
-- Visual polish: remove the subtle pale-pink halo around the approved silver Judge throne asset; it is faintly visible against light parchment/card surfaces.
-- Parchment cleanup: replace or repair the parchment panel asset because its checkerboard transparency preview is baked into the image and visibly appears behind the Judges section. Export/use a clean parchment asset with genuine transparency or a deliberate opaque parchment background.
 - Scaling infrastructure without measured need

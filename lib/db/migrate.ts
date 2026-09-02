@@ -3,6 +3,7 @@ import path from "node:path";
 import { withClient } from "./client";
 
 const MIGRATIONS_DIR = path.join(process.cwd(), "supabase", "migrations");
+const MIGRATION_LOCK_KEY = "tribunal_schema_migrations";
 
 export type AppliedMigration = {
   filename: string;
@@ -16,40 +17,49 @@ export async function applyMigrations(
     .sort();
 
   return withClient(async (client) => {
-    await client.query(`
-      create table if not exists schema_migrations (
-        filename text primary key,
-        applied_at timestamptz not null default now()
-      )
-    `);
+    await client.query("select pg_advisory_lock(hashtext($1))", [
+      MIGRATION_LOCK_KEY,
+    ]);
+    try {
+      await client.query(`
+        create table if not exists schema_migrations (
+          filename text primary key,
+          applied_at timestamptz not null default now()
+        )
+      `);
 
-    const applied: AppliedMigration[] = [];
+      const applied: AppliedMigration[] = [];
 
-    for (const filename of files) {
-      const existing = await client.query<{ filename: string }>(
-        "select filename from schema_migrations where filename = $1",
-        [filename],
-      );
-      if (existing.rowCount && existing.rowCount > 0) {
-        continue;
-      }
-
-      const sql = await readFile(path.join(migrationsDir, filename), "utf8");
-      await client.query("begin");
-      try {
-        await client.query(sql);
-        await client.query(
-          "insert into schema_migrations (filename) values ($1)",
+      for (const filename of files) {
+        const existing = await client.query<{ filename: string }>(
+          "select filename from schema_migrations where filename = $1",
           [filename],
         );
-        await client.query("commit");
-        applied.push({ filename });
-      } catch (error) {
-        await client.query("rollback");
-        throw error;
-      }
-    }
+        if (existing.rowCount && existing.rowCount > 0) {
+          continue;
+        }
 
-    return applied;
+        const sql = await readFile(path.join(migrationsDir, filename), "utf8");
+        await client.query("begin");
+        try {
+          await client.query(sql);
+          await client.query(
+            "insert into schema_migrations (filename) values ($1)",
+            [filename],
+          );
+          await client.query("commit");
+          applied.push({ filename });
+        } catch (error) {
+          await client.query("rollback");
+          throw error;
+        }
+      }
+
+      return applied;
+    } finally {
+      await client.query("select pg_advisory_unlock(hashtext($1))", [
+        MIGRATION_LOCK_KEY,
+      ]);
+    }
   });
 }

@@ -30,6 +30,8 @@ Set these on the host. Never use a `NEXT_PUBLIC_*` prefix. None of these values 
 | `DATABASE_URL` | secret | Server-only PostgreSQL URI. Use the Supabase **transaction pooler** host (`*.pooler.supabase.com`, port 6543). Do not add `sslmode`, `sslrootcert`, `sslcert`, or `sslkey`. |
 | `OPENROUTER_API_KEY` | secret | Server-only OpenRouter key for live model requests. |
 | `DATABASE_SSL_CA` | optional non-secret path | Override path to the official Supabase CA. Defaults to `certs/prod-ca-2021.crt` for Supabase hosts. |
+| `RATE_LIMIT_ENABLED` | configuration | Set to `true` in production after the rate-limit migration is applied. Leave unset for ordinary local development. |
+| `RATE_LIMIT_HMAC_SECRET` | secret | At least 32 random characters used to HMAC client addresses. Never reuse an API key or expose this value to the browser. |
 
 TLS remains `rejectUnauthorized: true` with the bundled official CA. Do not disable verification.
 
@@ -56,6 +58,19 @@ npm run migrate
 - The `pg` pool is a process-local singleton. Correctness is in PostgreSQL, not in process memory. Default pool size is appropriate for a single concurrent Case (up to eight concurrent model calls, then six). Use the transaction pooler.
 
 Do not weaken TLS. Production migrations are applied explicitly from a trusted checkout, not from a request handler.
+
+## Public execution cost guard
+
+The homepage is intentionally public, but model execution has external cost. When `RATE_LIMIT_ENABLED=true`, the application allows at most **five model-triggering actions per client subject in a fixed one-hour window**. A new Case launch reserves one action; an eligible Resume of a failed Run reserves another. Reads, invalid IDs, missing Runs, and non-failed Runs do not count.
+
+The client subject is the first address in Render's `X-Forwarded-For` header. It is HMAC-SHA256 hashed with `RATE_LIMIT_HMAC_SECRET` before persistence; the raw address is never stored. State lives in PostgreSQL, so limits remain consistent across processes and restarts. The sixth action returns HTTP `429` with `Retry-After` and a readable UI message. This is a bounded cost control, not authentication or a complete abuse-prevention system.
+
+Before enabling it on Render:
+
+1. Apply `20260902120000_add_execution_rate_limits.sql` with `npm run migrate` against production.
+2. Generate a dedicated random secret of at least 32 characters and store it as `RATE_LIMIT_HMAC_SECRET` on Render.
+3. Set `RATE_LIMIT_ENABLED=true` and redeploy.
+4. Smoke-test with care; every successful launch invokes models and counts toward the limit.
 
 ## Synchronous execution duration
 
@@ -109,7 +124,7 @@ After an eligible primary failure, the application may assign one distinct versi
 
 The application is already deployed on Render Free with auto-deploy from `main`. Further production deploys happen by pushing `main`. Do not create another service.
 
-1. Keep `DATABASE_URL` (transaction pooler) and `OPENROUTER_API_KEY` on the Render service. Confirm no `NEXT_PUBLIC_*` copies exist.
+1. Keep `DATABASE_URL` (transaction pooler), `OPENROUTER_API_KEY`, and `RATE_LIMIT_HMAC_SECRET` on the Render service. Confirm no `NEXT_PUBLIC_*` copies exist.
 2. Apply new SQL only with `npm run migrate` from a trusted checkout against production. Do not migrate from a request handler.
 3. Push `main`. Wait for the Render deploy to finish before starting a new Case.
 4. Smoke-check `/` if needed. A new dual-run Case is a separate, once-only live E2E.

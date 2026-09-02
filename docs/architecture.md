@@ -460,6 +460,12 @@ GET  /api/cases/{id}/results    → getCaseResults (read-only)
 - Invalid Case ID is 400; missing Case is 404; missing OpenRouter or database configuration is 503; invalid durable topology is 409; persisted integrity failure is 500 with `INTEGRITY_VIOLATION`. Unexpected failures return a safe 500 without secrets, stack traces, prompts, or raw provider payloads.
 - Keep execution in the synchronous Next.js route. The browser may poll the existing read-only results endpoint or request the optional SSE response transport to reveal transient progress and already-persisted seats. Neither transport creates a background job or changes the durable source of truth.
 - A complete initial Case has 14 model calls when every primary succeeds on attempt 1. The bounded maximum is 42 attempts: up to 14 in `SAME_MODEL`, plus up to 14 primary and 14 fallback attempts in `MIXED_MODELS`. Later user-triggered Resume cycles are separately bounded and auditable. Host request-duration limits must be verified against the serialized fallback bound before production deployment. SSE remains attached to the synchronous request; do not introduce fire-and-forget, queue, worker, or additional durable background infrastructure until measurements require it.
+
+### Public execution cost guard
+
+Case launch and eligible failed-Run Resume are the only public actions that authorize new model work. When enabled, both pass through one PostgreSQL-backed fixed-window guard: five actions per HMAC-hashed client address per hour. Case creation reserves the action used by its automatic initial execution, so `/execute` does not count a second time. Resume validates that the persisted Run exists and is `FAILED` before consuming an action. Read routes never consume quota.
+
+The limiter decision and increment are one atomic database statement. A denied action returns `429` and `Retry-After`; it does not begin model execution. The raw address is not stored. This protects bounded demo cost but does not replace authentication, a global provider budget, or distributed abuse controls; see `docs/security.md`.
 - Regardless of transport, idempotency and per-attempt auditing must prevent accidental duplicate calls and hidden cost.
 
 ## Failure handling and retry policy
@@ -528,9 +534,9 @@ Every actual API attempt is a separate auditable Model Call. Retries are not hid
 
 The initial MVP timeout is **90 seconds per individual API attempt**, not one timeout for the entire advocate or judge stage. It may become configurable later if measured behavior justifies it.
 
-### Manual reruns
+### Recovery versus rerun
 
-There is no manual rerun of an existing Tribunal Run in the MVP. Another complete execution requires using the homepage launch again, which creates a new Case with a new Case ID and two new Tribunal Runs. This preserves an immutable audit history.
+There is no unrestricted rerun of a completed or active Tribunal Run. A durable `FAILED` Run alone exposes Resume: one atomic claim starts a new recovery cycle for unresolved seats while retaining every successful seat, prior attempt, and cost record. A fresh complete hearing still requires the homepage launch, which creates a new Case and two new Runs.
 
 ## Project structure (foundation)
 
@@ -541,6 +547,7 @@ lib/
   charge-sheet/      # Canonical metadata; legacy validators are not wired to HTTP/UI
   cases/             # Create/retrieve Case records and their two Tribunal Runs
   model-calls/       # Persist/retrieve individual AI attempt audit rows
+  rate-limit/        # PostgreSQL-backed public execution cost guard
   tribunal/          # Reusable Tribunal engine
   ai/
     profiles/        # Instructor hard-coded profiles

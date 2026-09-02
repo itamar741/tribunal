@@ -39,7 +39,7 @@ Apply pending files:
 npm run migrate
 ```
 
-The runner:
+The runner takes a PostgreSQL advisory lock so two deploy/test processes cannot apply the same migration concurrently. It then:
 
 1. Connects with `DATABASE_URL`.
 2. Creates `schema_migrations` if needed.
@@ -115,6 +115,12 @@ model_calls
   created_at timestamptz not null default now()
   unique (run_id, agent_role, recovery_cycle, model_source, attempt)
   foreign key (run_id, case_id) references tribunal_runs(id, case_id)
+
+execution_rate_limits
+  subject_hash text primary key
+  window_started_at timestamptz not null
+  action_count integer not null check (action_count between 1 and 5)
+  updated_at timestamptz not null
 ```
 
 Canonical Markdown text is stored on the Case. No uploaded file/blob exists.
@@ -135,3 +141,5 @@ Judge and Tribunal Run verdicts are `JUSTIFIED | NOT_JUSTIFIED`. Three valid jud
 Each `model_calls` row is one actual AI API attempt. `model_source` distinguishes the configured `PRIMARY` from an application-selected `FALLBACK`; `recovery_cycle` groups attempts from the initial execution and later Resume cycles. `SUCCEEDED` means the output passed the applicable runtime response contract; that structured output is stored in `validated_response`. Failed attempts normally store `NULL` there and may include a safe normalized `failure_classification`. Unknown usage/cost is `NULL`, never a guessed zero. A provider-reported zero is stored as zero. Prompts, raw model output, hidden reasoning, and provider request payloads are not stored. Case results and token/cost totals are reconstructed from these three tables by `getCaseResults`; aggregates are not stored as separate rows. Each total keeps the known subtotal and a per-metric completeness flag.
 
 Useful indexes: `tribunal_runs(case_id)`, `model_calls(case_id)`, and `model_calls(run_id, agent_role, recovery_cycle, model_source, attempt)`. The last index also enforces uniqueness for each auditable attempt identity.
+
+`execution_rate_limits` is operational cost-control state, not Case evidence. `subject_hash` contains only a keyed HMAC of the client address; raw IP addresses are not persisted. The atomic upsert both counts and decides, so concurrent requests cannot exceed the five-action fixed-window allowance through a read-then-write race.
