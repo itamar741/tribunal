@@ -4,7 +4,7 @@
 
 This plan recorded the dependency-ordered path to the completed MVP. All twelve phases are complete. It remains a historical planning artifact and does not authorize new implementation by itself.
 
-**2026-09-02 product revisions:** the upload flow described in the historical phases below has been superseded. The active product uses the server-owned T-001 fixture, exposes one homepage launch action, creates a fresh Case, and starts both Runs automatically. There is no file-upload UI or upload route. A later bounded-recovery revision also superseded historical statements that standby models were not used automatically: eligible unresolved `MIXED_MODELS` seats may now receive one distinct audited fallback per recovery cycle, while `SAME_MODEL` never substitutes a model. Current open work is tracked only in `docs/backlog.md`.
+**2026-09-02 product revisions:** the upload flow described in the historical phases below has been superseded. The active product uses the server-owned T-001 fixture, exposes one homepage launch action, creates a fresh Case, and starts both Runs automatically. There is no file-upload UI or upload route. A later bounded-recovery revision also superseded historical statements that standby models were not used automatically: eligible unresolved `MIXED_MODELS` seats may now receive one distinct audited fallback per recovery cycle, while `SAME_MODEL` never substitutes a model. The remaining items in `docs/backlog.md` are explicitly future hardening, not unfinished project work.
 
 ## MVP status
 
