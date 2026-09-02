@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatRunStatus, formatVerdict } from "@/lib/ui/format";
+import { recoverySummary } from "@/lib/ui/recovery";
 import type { CaseResultsView } from "@/lib/ui/types";
 import type { LiveExecutionUpdates } from "@/lib/ui/live-execution";
 import { AccountingSummary } from "./AccountingSummary";
@@ -44,6 +45,7 @@ function RunOutcomeCard({
   onSelect: () => void;
 }) {
   const verdict = run.status === "SUCCEEDED" ? run.finalVerdict : null;
+  const recovery = recoverySummary(run);
   const sealClass = verdict
     ? verdict === "JUSTIFIED"
       ? "verdict-justified"
@@ -71,6 +73,11 @@ function RunOutcomeCard({
             {formatRunStatus(run.status)}
           </span>
           {run.fallbackUsed ? <span className="ml-2 inline-block text-xs font-semibold uppercase tracking-[0.1em] text-[#e4c878]">Fallback used</span> : null}
+          {recovery ? (
+            <span className="mt-2 block text-xs font-semibold leading-4 text-[#ead28e]">
+              {recovery}
+            </span>
+          ) : null}
           <span className="mt-4 block text-sm leading-5 text-[#bfae8d]">
             {run.status === "SUCCEEDED" && run.finalVerdict ? (
               <>
