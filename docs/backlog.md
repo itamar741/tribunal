@@ -5,11 +5,6 @@
 - [x] Reduce the uninterrupted viewport-attention delay before the verdict-stamp animation from `1.5s` to `0.7s`.
 - [x] Raise the stamp tool's landing position so its contact coordinates align with the final rubber impression on desktop and mobile.
 
-## Open visual polish
-
-- [ ] Remove the faint pale-pink halo around the approved silver Menachem Elon throne asset on light parchment surfaces.
-- [ ] Replace or repair the Judges parchment asset whose transparency checkerboard is baked into the image.
-
 ## Future security hardening
 
 - [ ] Add authentication and per-account authorization if the application moves beyond its current public course-demo scope.
