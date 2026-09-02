@@ -265,6 +265,18 @@ describe("CaseResultsView", () => {
     assert.equal(html.includes("Final verdict: Justified"), false);
   });
 
+  it("shows a concise recovery indicator for a successful retried run", () => {
+    const same = succeededRun("SAME_MODEL", "JUSTIFIED");
+    same.attempts = [
+      { id: "retry-1", runId: same.id, stage: "ADVOCATES", agentRole: "DEFENSE_1", attempt: 1, model: "test", modelSource: "PRIMARY", recoveryCycle: 1, failureClassification: "RATE_LIMITED", fallbackEligible: true, status: "FAILED", inputTokens: null, outputTokens: null, totalTokens: null, inputCost: null, outputCost: null, totalCost: null, durationMs: 1, providerCallId: null, validatedResponse: null, errorType: "HTTP_ERROR", errorMessage: "Provider returned error.", createdAt: "2026-01-01T00:00:00.000Z" },
+      { id: "retry-2", runId: same.id, stage: "ADVOCATES", agentRole: "DEFENSE_1", attempt: 2, model: "test", modelSource: "PRIMARY", recoveryCycle: 1, failureClassification: null, fallbackEligible: false, status: "SUCCEEDED", inputTokens: null, outputTokens: null, totalTokens: null, inputCost: null, outputCost: null, totalCost: null, durationMs: 1, providerCallId: null, validatedResponse: null, errorType: null, errorMessage: null, createdAt: "2026-01-01T00:00:01.000Z" },
+    ];
+    const html = renderToStaticMarkup(createElement(CaseResultsView, {
+      results: caseResults({ SAME_MODEL: same, MIXED_MODELS: runView("MIXED_MODELS") }),
+    }));
+    assert.match(html, /Recovered after 1 failed attempt/);
+  });
+
   it("marks incomplete accounting as known but not guaranteed", () => {
     const html = renderToStaticMarkup(
       createElement(CaseResultsView, {
