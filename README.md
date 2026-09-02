@@ -14,6 +14,8 @@ The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Su
 - [Model selection](docs/model-selection.md)
 - [Database](docs/database.md)
 - [Deployment](docs/deployment.md)
+- [Security and threat model](docs/security.md)
+- [Merge readiness](docs/merge-readiness.md)
 - [Product backlog](docs/backlog.md)
 
 ## Getting started
@@ -21,6 +23,7 @@ The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Su
 ```bash
 cp .env.example .env.local
 # Set DATABASE_URL and OPENROUTER_API_KEY in .env.local.
+# Leave RATE_LIMIT_ENABLED unset locally unless you are testing the cost guard.
 npm install
 npm run migrate
 npm run dev
@@ -37,9 +40,10 @@ npm test
 npm run lint
 npm run typecheck
 npm run build
+npm audit --audit-level=high
 ```
 
-The same verification gate runs in GitHub Actions. PostgreSQL integration tests run when `DATABASE_URL` is available and otherwise skip cleanly; production migrations remain an explicit operator action.
+The same verification gate runs in GitHub Actions. PostgreSQL integration tests run when `DATABASE_URL` is available and otherwise skip cleanly; production migrations remain an explicit operator action. Before enabling the production cost guard, apply migrations and set its two server-only variables as described in [Deployment](docs/deployment.md).
 
 ## Scripts
 

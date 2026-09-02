@@ -2,6 +2,12 @@
 
 This document maps the ASE running-project Case Design Dossier to the version-controlled Tribunal implementation. The preserved source is [`docs/reference/tribunal-running-project-info-package.txt`](reference/tribunal-running-project-info-package.txt).
 
+## Course-material review
+
+The reviewed ASE lesson decks support the existing modular-monolith, explicit contracts, incremental verification, traceable decisions, and human-review approach. Lesson 9 adds an explicit merge-readiness and security expectation; those requirements are operationalized in [`merge-readiness.md`](merge-readiness.md), [`security.md`](security.md), the PR template, and CI dependency auditing.
+
+The separately supplied malware-analysis assignment describes a different project and threat scenario. It was checked for general engineering/security lessons, but its malware-specific deliverables are not Tribunal requirements and were not imported into the product scope.
+
 ## Canonical Case
 
 - The server-owned fixture is `fixtures/charge-sheets/t-001-the-realm-v-jon-snow.md`.
@@ -40,4 +46,6 @@ The fictional-proceeding qualification is preserved. The profiles adapt document
 
 ## Verification evidence
 
-Automated verification covers the canonical fixture, seven role/profile mappings, simulation rules, prompt boundaries, response contracts, model assignment invariants, retries, fallback recovery, stage ordering, majority calculation, persistence, accounting, and read-only result reconstruction. The repository verification gate is `npm test`, `npm run lint`, `npm run typecheck`, and `npm run build`.
+Automated verification covers the canonical fixture, seven role/profile mappings, simulation rules, prompt boundaries, response contracts, model assignment invariants, retries, fallback recovery, stage ordering, majority calculation, persistence, accounting, cost limiting, and read-only result reconstruction. The repository verification gate is `npm test`, `npm run lint`, `npm run typecheck`, `npm run build`, and a production-dependency audit.
+
+Lesson 9's merge-readiness and security guidance is made explicit in [`merge-readiness.md`](merge-readiness.md) and [`security.md`](security.md): functional completeness, verification evidence, engineering hygiene, rationale, auditability, input boundaries, least privilege, secret hygiene, dependency review, and human review before merge.

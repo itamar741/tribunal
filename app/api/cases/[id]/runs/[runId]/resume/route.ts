@@ -1,17 +1,35 @@
 import { NextResponse } from "next/server";
 import { acceptsEventStream, streamExecution } from "@/lib/api/server-sent-events";
 import { getOpenRouterApiKey } from "@/lib/ai/openrouter";
-import { isCaseId, PostgresCaseRepository, PostgresTribunalRunRepository } from "@/lib/cases";
+import {
+  isCaseId,
+  PostgresCaseRepository,
+  PostgresTribunalRunRepository,
+  TribunalRunStatus,
+} from "@/lib/cases";
+import { isDatabaseUnavailableError } from "@/lib/db";
 import { PostgresModelCallRepository } from "@/lib/model-calls";
 import { getCaseResults } from "@/lib/results";
 import { executeTribunalRun, type ModelProgressListener } from "@/lib/tribunal";
+import {
+  authorizeModelAction,
+  PostgresExecutionRateLimitRepository,
+  RateLimitConfigError,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 800;
 
 type ResumeResult = {
   status: number;
-  body: { ok: boolean; code?: string; error?: string; runId?: string; status?: "SUCCEEDED" | "FAILED" };
+  body: {
+    ok: boolean;
+    code?: string;
+    error?: string;
+    retryAfterSeconds?: number;
+    runId?: string;
+    status?: "SUCCEEDED" | "FAILED";
+  };
 };
 
 /** Resume exactly one FAILED durable Run. claimResume is conditional, so a
@@ -19,6 +37,7 @@ type ResumeResult = {
 async function resume(
   id: string,
   runId: string,
+  request: Request,
   onProgress?: ModelProgressListener,
 ): Promise<ResumeResult> {
   if (!isCaseId(id) || !isCaseId(runId)) {
@@ -35,6 +54,56 @@ async function resume(
   const run = record?.runs.find((item) => item.id === runId);
   if (!record || !run) {
     return { status: 404, body: { ok: false, code: "RUN_NOT_FOUND", error: "No matching Tribunal Run exists." } };
+  }
+  if (run.status !== TribunalRunStatus.FAILED) {
+    return {
+      status: 409,
+      body: {
+        ok: false,
+        code: "RUN_NOT_RESUMABLE",
+        error: "This Run is no longer available for recovery.",
+      },
+    };
+  }
+  try {
+    const decision = await authorizeModelAction(
+      request,
+      new PostgresExecutionRateLimitRepository(),
+    );
+    if (decision && !decision.allowed) {
+      const minutes = Math.max(1, Math.ceil(decision.retryAfterSeconds / 60));
+      return {
+        status: 429,
+        body: {
+          ok: false,
+          code: "EXECUTION_RATE_LIMITED",
+          error: `The chamber has reached its hourly hearing limit. Try again in about ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`,
+          retryAfterSeconds: decision.retryAfterSeconds,
+        },
+      };
+    }
+  } catch (error) {
+    if (error instanceof RateLimitConfigError) {
+      return {
+        status: 503,
+        body: {
+          ok: false,
+          code: "RATE_LIMIT_CONFIGURATION_ERROR",
+          error: "The Tribunal cost guard is not configured.",
+        },
+      };
+    }
+    if (isDatabaseUnavailableError(error)) {
+      return {
+        status: 503,
+        body: {
+          ok: false,
+          code: "DATABASE_UNAVAILABLE",
+          error: "The Tribunal database is temporarily unavailable.",
+        },
+      };
+    }
+    throw error;
   }
   let claimed;
   try {
@@ -64,8 +133,14 @@ export async function POST(
 ): Promise<Response> {
   const { id, runId } = await context.params;
   if (acceptsEventStream(request)) {
-    return streamExecution((onProgress) => resume(id, runId, onProgress));
+    return streamExecution((onProgress) => resume(id, runId, request, onProgress));
   }
-  const result = await resume(id, runId);
-  return NextResponse.json(result.body, { status: result.status });
+  const result = await resume(id, runId, request);
+  return NextResponse.json(result.body, {
+    status: result.status,
+    headers:
+      result.status === 429 && result.body.retryAfterSeconds
+        ? { "Retry-After": String(result.body.retryAfterSeconds) }
+        : undefined,
+  });
 }

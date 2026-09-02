@@ -29,6 +29,7 @@ The MVP is complete. The following criteria were observed in automated tests and
 15. Every actual model API attempt—including retries and failed attempts that incurred usage—is recorded individually with Case, Tribunal Run, stage (`ADVOCATES` or `JUDGES`), agent role, attempt number, model, input/output/total tokens, input/output/total cost, duration, and success/failure, using OpenRouter-reported usage/cost.
 16. Individual model-call records are the accounting source of truth, and the application can calculate totals per agent (including all attempts), per stage within a Tribunal Run, per complete Tribunal Run, and per Case across both runs.
 17. Secrets, prompts, profiles, and model configuration are not exposed to the browser as editable client state.
+18. When the production cost guard is enabled, at most five new-hearing or eligible Resume actions per client subject are accepted in one hour; excess actions fail visibly without starting model work.
 
 **Charge-sheet Case persistence phase success:**
 
@@ -100,6 +101,7 @@ Validate against observable criteria:
 - **Retrieval:** a persisted Case can be loaded by unique Case ID without creating new model calls.
 - **Runs:** every Case has exactly two run records (`SAME_MODEL`, `MIXED_MODELS`); duplicate kinds are rejected; initialization is transactional.
 - **Regression:** changing model assignment config does not require duplicating tribunal workflow code.
+- **Cost guard:** actions 1–5 are accepted, action 6 returns `429` with `Retry-After`, a new window resets the allowance, and concurrent requests cannot bypass the bound.
 - **Foundation:** `npm run lint`, `npm run build`, and app start succeed.
 
 ## 5. Known pitfalls

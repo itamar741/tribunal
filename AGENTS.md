@@ -13,8 +13,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Preserve the modular Tribunal architecture (`lib/tribunal`, `lib/ai/*`, `lib/db`, `lib/charge-sheet`, `lib/cases`, `lib/model-calls`).
 - Use one reusable Tribunal engine; do not duplicate `SAME_MODEL` and `MIXED_MODELS` workflow logic.
 - Keep model assignment in configuration, not orchestration branches. Canonical rationale: `docs/model-selection.md`.
-- MVP charge sheets are `.md` only (read as UTF-8 text; do not parse or render Markdown); keep upload transport separate from validation/read and later pipeline stages; do not permanently store original uploads unless explicitly required.
-- Persist validated Markdown text on each new unique Case; store the original file name; never store the original file/blob; do not deduplicate uploads.
+- The only MVP charge sheet is the server-owned UTF-8 T-001 fixture. The browser sends no charge-sheet content and exposes no upload or editing control.
+- Persist the canonical fixture text and name on every new unique Case; do not deduplicate launches or store a separate file/blob.
 - Create exactly one `SAME_MODEL` and one `MIXED_MODELS` Tribunal Run atomically with each Case; enforce unique `(case_id, run_type)` in PostgreSQL.
 - Enforce a 1 MB server-side size limit and reject malformed UTF-8 rather than replacing it.
 - Use version-controlled SQL migrations and server-side PostgreSQL (`pg`); do not introduce an ORM without an explicit requirement.
@@ -27,8 +27,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Do not invent a generic charge-sheet structural contract from the T-001 example. Instructor profiles are version-controlled under `lib/ai/profiles/`; do not rewrite their substantive text.
 - Do not expand MVP scope without an explicit requirement.
 - Prefer failure visibility; AI failures must never silently become valid verdicts.
-- Bound each AI agent to at most two API attempts (one initial, one retry); do not retry 401/403 or other permanent configuration/auth failures; do not switch models on retry.
-- A failed advocate after two attempts fails that run and blocks judges; a failed judge after two attempts yields no majority; do not majority-vote from two judges. `SAME_MODEL` and `MIXED_MODELS` fail independently.
-- There is no manual rerun of an existing Tribunal Run; another execution requires a new Case. Canonical retry/failure policy: `docs/architecture.md`.
+- Bound each model assignment to at most two API attempts (one initial, one retry); do not retry 401/403 or other permanent configuration/auth failures. `MIXED_MODELS` may use one distinct configured fallback for an eligible unresolved seat; `SAME_MODEL` never substitutes a model.
+- A failed advocate after the bounded primary/fallback policy fails that run and blocks judges; a failed judge yields no majority; do not majority-vote from two judges. `SAME_MODEL` and `MIXED_MODELS` fail independently.
+- Resume is allowed only for a durable `FAILED` Run. It atomically starts a new recovery cycle, retains successful seats and audit history, and executes only unresolved seats. Canonical retry/failure policy: `docs/architecture.md`.
+- Public model-triggering actions are protected by the PostgreSQL-backed cost guard documented in `docs/security.md`: five launches or eligible Resume actions per client subject per hour when enabled. Never store raw client IP addresses.
 - There is no human-recorded final verdict; each run’s two-of-three judge majority is that run’s final verdict. Judge and Tribunal Run verdicts are `JUSTIFIED | NOT_JUSTIFIED`.
 - Verify work against `docs/specification.md` before reporting completion.

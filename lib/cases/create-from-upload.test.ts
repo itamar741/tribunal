@@ -317,6 +317,24 @@ describe("Model Call schema", () => {
   });
 });
 
+describe("Execution rate-limit schema", () => {
+  it("stores only a bounded hashed subject counter", () => {
+    const sql = readFileSync(
+      path.join(
+        process.cwd(),
+        "supabase/migrations/20260902120000_add_execution_rate_limits.sql",
+      ),
+      "utf8",
+    );
+
+    assert.match(sql, /create table execution_rate_limits/i);
+    assert.match(sql, /subject_hash text primary key/i);
+    assert.match(sql, /action_count >= 1 and action_count <= 5/i);
+    assert.doesNotMatch(sql, /\bip_address\b/i);
+    assert.doesNotMatch(sql, /\braw_ip\b/i);
+  });
+});
+
 describe("isCaseId", () => {
   it("accepts a UUID and rejects other strings", () => {
     assert.equal(isCaseId("8f3c1a2e-4b5d-4e6f-8a90-1234567890ab"), true);

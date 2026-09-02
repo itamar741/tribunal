@@ -91,6 +91,30 @@ describe("tribunal client", () => {
     assert.equal(JSON.stringify(calls[0]?.init ?? {}).includes("chargeSheet"), false);
   });
 
+  it("surfaces a cost-guard rejection without attempting execution", async () => {
+    const calls: string[] = [];
+    const fetchImpl = mockFetch((url) => {
+      calls.push(url);
+      return Response.json(
+        {
+          ok: false,
+          code: "EXECUTION_RATE_LIMITED",
+          error: "The chamber has reached its hourly hearing limit.",
+          retryAfterSeconds: 900,
+        },
+        { status: 429, headers: { "Retry-After": "900" } },
+      );
+    });
+    const result = await createCanonicalCase(fetchImpl);
+    assert.deepEqual(result, {
+      ok: false,
+      status: 429,
+      code: "EXECUTION_RATE_LIMITED",
+      error: "The chamber has reached its hourly hearing limit.",
+    });
+    assert.deepEqual(calls, ["/api/cases"]);
+  });
+
   it("executes the created Case ID with no client configuration", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const fetchImpl = mockFetch((url, init) => {
