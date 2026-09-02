@@ -4,6 +4,11 @@ Next.js modular monolith for dual AI Tribunal analysis of a fixed canonical char
 
 The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Supabase PostgreSQL, OpenRouter). The accepted production dual-run E2E succeeded: both `SAME_MODEL` and `MIXED_MODELS` persisted `NOT_JUSTIFIED`, results survived reload without rerunning models, and duplicate execution is prevented.
 
+## Submission
+
+- Student: Itamar Shapira
+- Student ID: 208575076
+
 ## Docs
 
 - [Course dossier alignment](docs/course-alignment.md)
