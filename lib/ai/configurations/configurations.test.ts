@@ -88,12 +88,12 @@ describe("SAME_MODEL assignment", () => {
     );
   });
 
-  it("uses minimax/minimax-m3:free as the homogeneous baseline", () => {
-    assert.equal(SAME_MODEL_ID, "minimax/minimax-m3:free");
+  it("uses openai/gpt-4.1-nano as the homogeneous baseline", () => {
+    assert.equal(SAME_MODEL_ID, "openai/gpt-4.1-nano");
     for (const role of Object.values(TribunalAgentRole)) {
       assert.equal(
         getModelIdForRole(TribunalRunKind.SAME_MODEL, role),
-        "minimax/minimax-m3:free",
+        "openai/gpt-4.1-nano",
       );
     }
     assert.equal(
@@ -121,7 +121,7 @@ describe("MIXED_MODELS assignment", () => {
       [TribunalAgentRole.DEFENSE_1]: "openai/gpt-4.1-mini",
       [TribunalAgentRole.DEFENSE_2]: "mistralai/mistral-small-3.2-24b-instruct",
       [TribunalAgentRole.PROSECUTION_1]: "qwen/qwen3-30b-a3b-instruct-2507",
-      [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
+      [TribunalAgentRole.PROSECUTION_2]: "openai/gpt-4.1-nano",
       [TribunalAgentRole.JUDGE_1]: "openai/gpt-4.1",
       [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
       [TribunalAgentRole.JUDGE_3]: "meta-llama/llama-4-maverick",
@@ -140,12 +140,14 @@ describe("model-selection constraints", () => {
   it("allows only the documented paid primary IDs", () => {
     assert.deepEqual(EXPLICITLY_PAID_MODEL_IDS, [
       "openai/gpt-4.1-mini",
+      "openai/gpt-4.1-nano",
       "openai/gpt-4.1",
       "meta-llama/llama-4-maverick",
       "mistralai/mistral-small-3.2-24b-instruct",
       "qwen/qwen3-30b-a3b-instruct-2507",
     ]);
     assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1-mini"), true);
+    assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1-nano"), true);
     assert.equal(isExplicitlyPaidModelId("openai/gpt-4.1"), true);
     assert.equal(isExplicitlyPaidModelId("meta-llama/llama-4-maverick"), true);
     assert.equal(isExplicitlyPaidModelId("mistralai/mistral-small-3.2-24b-instruct"), true);
@@ -385,8 +387,8 @@ describe("model output modes", () => {
       ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
-      getOutputModeForModel("minimax/minimax-m3:free"),
-      ModelOutputMode.JSON_OBJECT,
+      getOutputModeForModel("openai/gpt-4.1-nano"),
+      ModelOutputMode.JSON_SCHEMA,
     );
     assert.equal(
       getOutputModeForModel("mistralai/mistral-small-3.2-24b-instruct"),

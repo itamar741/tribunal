@@ -2,7 +2,7 @@
 
 This is the canonical rationale for the version-controlled OpenRouter model assignment. Runtime IDs live in `lib/ai/configurations/`. Profiles, prompt builders, response contracts, and UI do not contain model IDs.
 
-The current selection is **no longer all-free**. SAME_MODEL and two MIXED seats remain free catalog endpoints. MIXED `DEFENSE_1`, `DEFENSE_2`, `PROSECUTION_1`, `JUDGE_1`, and `JUDGE_3` are explicitly paid IDs. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
+The current selection is **no longer all-free**. SAME_MODEL and six MIXED seats are explicitly paid IDs; only MIXED `JUDGE_2` remains a free catalog endpoint. Concrete IDs, output capabilities, and current pricing must be catalog-verified.
 
 The role table below is the current configuration. Later sections preserve dated production evidence and earlier model revisions; statements about what was or was not automatic describe the implementation at that historical point unless a section explicitly states current policy. Paid MIXED seats exist for reliability, not because the Tribunal requires paid inference. Availability and listed prices remain operational configuration and must be revalidated against `GET /api/v1/models` before a later change.
 
@@ -48,9 +48,15 @@ Invariant:
 
 Selected ID for all seven roles:
 
-`minimax/minimax-m3:free`
+`openai/gpt-4.1-nano`
 
-This is the selected MVP baseline under the current constraints. It is not claimed to be objectively the best model. Its configured output mode is `JSON_OBJECT`.
+This is the selected MVP baseline under the current constraints. It is not claimed to be objectively the best model. Its configured output mode is `JSON_SCHEMA`.
+
+### Why the baseline was revised to GPT-4.1 Nano
+
+On 2026-09-28, the deployed `minimax/minimax-m3:free` endpoint returned `MODEL_UNAVAILABLE` for MIXED `PROSECUTION_2`. The bounded MIXED fallback recovered that seat, but the same endpoint is also the homogeneous baseline, where preserving the experimental control correctly forbids cross-model fallback. MiniMax was therefore removed from all active configuration.
+
+`openai/gpt-4.1-nano` was selected after a live OpenRouter catalog check because it is currently routable, has a 1,047,576-token context window, supports `response_format` and `structured_outputs`, and has low listed pricing ($0.10/M input tokens; $0.40/M output tokens). It is intentionally assigned to MIXED `PROSECUTION_2` as well: the seven MIXED seats remain seven distinct IDs, while overlap with the SAME_MODEL control is permitted.
 
 ### Why GLM 5.2 was previously selected
 
@@ -104,7 +110,7 @@ Invariant:
 
 > All seven roles use seven distinct concrete model IDs.
 
-Diversity across model families is deliberate so the heterogeneous Tribunal is meaningfully different from `SAME_MODEL`. One `MIXED_MODELS` seat (`PROSECUTION_2`) currently reuses the `SAME_MODEL` baseline ID (`minimax/minimax-m3:free`); the other six seats use different concrete IDs. `JUDGE_2` remains `nvidia/nemotron-3-super-120b-a12b:free` after the SAME_MODEL revision. The run still satisfies the seven-distinct-IDs invariant. Overlap between `SAME_MODEL` and one mixed role is allowed.
+Diversity across model families is deliberate so the heterogeneous Tribunal is meaningfully different from `SAME_MODEL`. One `MIXED_MODELS` seat (`PROSECUTION_2`) currently reuses the `SAME_MODEL` baseline ID (`openai/gpt-4.1-nano`); the other six seats use different concrete IDs. `JUDGE_2` remains `nvidia/nemotron-3-super-120b-a12b:free`. The run still satisfies the seven-distinct-IDs invariant. Overlap between `SAME_MODEL` and one mixed role is allowed.
 
 Provider-side structure is a hint to the gateway, not a substitute for Zod. Structured-output capability differs by model and is an explicit versioned configuration (`JSON_SCHEMA`, `JSON_OBJECT`, `PROMPT_ONLY`) in `lib/ai/configurations/`. The transport does not probe capabilities at runtime. Every mode still requires JSON parse + Zod.
 
@@ -113,7 +119,7 @@ Provider-side structure is a hint to the gateway, not a substitute for Zod. Stru
 | `DEFENSE_1` | `openai/gpt-4.1-mini` | OpenAI GPT-4.1 Mini | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces paid GPT-OSS after two deployed completions with null assistant content and mandatory reasoning. Conventional text output; catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 | `DEFENSE_2` | `mistralai/mistral-small-3.2-24b-instruct` | Mistral Small 3.2 24B | paid | 131K (131,072) | `JSON_SCHEMA` | Replaces the slow MiniMax M2.7 free endpoint. Low listed price, fast provider throughput, and improved structured-output/function-calling behavior. |
 | `PROSECUTION_1` | `qwen/qwen3-30b-a3b-instruct-2507` | Qwen3 30B A3B Instruct | paid | 262K (262,144) | `JSON_SCHEMA` | Replaces Nemotron 3 Ultra after repeated long-running free-endpoint risk. Very low listed price, multilingual instruction following, and structured-output support. |
-| `PROSECUTION_2` | `minimax/minimax-m3:free` | MiniMax M3 | `:free` | 1M (1,048,576) | `JSON_OBJECT` | Distinct MiniMax ID and a very large context. After the 2026-08-26 SAME_MODEL revision this ID also serves as the homogeneous baseline. Tradeoff: JSON mode rather than JSON Schema. |
+| `PROSECUTION_2` | `openai/gpt-4.1-nano` | OpenAI GPT-4.1 Nano | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Low-cost, catalog-verified structured output. Replaces MiniMax after deployed `MODEL_UNAVAILABLE`; remains distinct from every other MIXED seat. |
 | `JUDGE_1` | `openai/gpt-4.1` | OpenAI GPT-4.1 | paid | ~1M (1,047,576) | `JSON_SCHEMA` | Replaces `z-ai/glm-5.2:free` after both allowed deployed attempts returned upstream HTTP 429. Catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |
 | `JUDGE_2` | `nvidia/nemotron-3-super-120b-a12b:free` | NVIDIA Nemotron 3 Super | `:free` | 256K (262,144) | `JSON_SCHEMA` | Open hybrid MoE with reasoning and schema support. Succeeded on attempt 1 in the latest deployed MIXED Judge stage and was not changed. |
 | `JUDGE_3` | `meta-llama/llama-4-maverick` | Meta Llama 4 Maverick | paid | 1M (1,048,576) | `JSON_SCHEMA` | Replaces `google/gemma-4-26b-a4b-it:free` after both allowed deployed attempts returned upstream HTTP 429. Catalog lists `response_format` and `structured_outputs`. Provider-reported cost is audited. |

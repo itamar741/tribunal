@@ -89,7 +89,7 @@ function successTransport(role: RepresentativeRole): OpenRouterChatCompletionRes
   return {
     ok: true,
     content: JSON.stringify(advocateFor(role)),
-    returnedModel: "minimax/minimax-m3:free",
+    returnedModel: "openai/gpt-4.1-nano",
     providerCallId: `gen-${role}`,
     generationId: null,
     usage: {

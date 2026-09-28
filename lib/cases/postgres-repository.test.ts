@@ -1022,7 +1022,7 @@ describe("PostgreSQL persistence", {
           completeChat: async () => ({
             ok: true,
             content: JSON.stringify(validated),
-            returnedModel: "minimax/minimax-m3:free",
+            returnedModel: "openai/gpt-4.1-nano",
             providerCallId: "gen-phase4b-mock",
             generationId: null,
             usage: {
@@ -1040,7 +1040,7 @@ describe("PostgreSQL persistence", {
       assert.equal(result.record.agentRole, ModelCallAgentRole.DEFENSE_1);
       assert.equal(result.record.stage, ModelCallStage.ADVOCATES);
       assert.equal(result.record.attempt, 1);
-      assert.equal(result.record.model, "minimax/minimax-m3:free");
+      assert.equal(result.record.model, "openai/gpt-4.1-nano");
       assert.deepEqual(result.record.validatedResponse, validated);
       assert.equal(result.record.providerCallId, "gen-phase4b-mock");
       assert.equal(result.record.inputCost, null);
@@ -1116,7 +1116,7 @@ describe("PostgreSQL persistence", {
             return {
               ok: true,
               content: JSON.stringify(advocateResponse()),
-              returnedModel: "minimax/minimax-m3:free",
+              returnedModel: "openai/gpt-4.1-nano",
               providerCallId: "gen-phase5-mock",
               generationId: null,
               usage: {
