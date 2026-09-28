@@ -12,7 +12,7 @@ import { TribunalRunKind } from "./run-kinds";
  * Canonical rationale: docs/model-selection.md
  */
 
-export const SAME_MODEL_ID = "minimax/minimax-m3:free";
+export const SAME_MODEL_ID = "openai/gpt-4.1-nano";
 
 export const SAME_MODEL_BY_ROLE = {
   [TribunalAgentRole.DEFENSE_1]: SAME_MODEL_ID,
@@ -30,6 +30,7 @@ export const SAME_MODEL_BY_ROLE = {
  */
 export const EXPLICITLY_PAID_MODEL_IDS = [
   "openai/gpt-4.1-mini",
+  "openai/gpt-4.1-nano",
   "openai/gpt-4.1",
   "meta-llama/llama-4-maverick",
   "mistralai/mistral-small-3.2-24b-instruct",
@@ -44,7 +45,7 @@ export const MIXED_MODELS_BY_ROLE = {
   [TribunalAgentRole.DEFENSE_1]: "openai/gpt-4.1-mini",
   [TribunalAgentRole.DEFENSE_2]: "mistralai/mistral-small-3.2-24b-instruct",
   [TribunalAgentRole.PROSECUTION_1]: "qwen/qwen3-30b-a3b-instruct-2507",
-  [TribunalAgentRole.PROSECUTION_2]: "minimax/minimax-m3:free",
+  [TribunalAgentRole.PROSECUTION_2]: "openai/gpt-4.1-nano",
   [TribunalAgentRole.JUDGE_1]: "openai/gpt-4.1",
   [TribunalAgentRole.JUDGE_2]: "nvidia/nemotron-3-super-120b-a12b:free",
   [TribunalAgentRole.JUDGE_3]: "meta-llama/llama-4-maverick",

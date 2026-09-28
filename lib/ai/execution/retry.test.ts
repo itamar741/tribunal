@@ -636,7 +636,7 @@ describe("executeRepresentativeWithRetry", () => {
       true,
     );
     assert.equal(
-      calls.every((call) => call.input.output.mode === "JSON_OBJECT"),
+      calls.every((call) => call.input.output.mode === "JSON_SCHEMA"),
       true,
     );
   });

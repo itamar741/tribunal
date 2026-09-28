@@ -79,7 +79,7 @@ function successTransport(
   return {
     ok: true,
     content: JSON.stringify(validAdvocate),
-    returnedModel: "minimax/minimax-m3:free",
+    returnedModel: "openai/gpt-4.1-nano",
     providerCallId: "gen-success",
     generationId: null,
     usage: {
@@ -168,14 +168,14 @@ describe("executeRepresentativeAttempt", () => {
       captured?.model,
       getModelIdForRole(TribunalRunKind.SAME_MODEL, RepresentativeRole.DEFENSE_1),
     );
-    assert.equal(captured?.model, "minimax/minimax-m3:free");
-    assert.equal(captured?.output.mode, "JSON_OBJECT");
-    assert.equal("jsonSchema" in (captured?.output ?? {}), false);
+    assert.equal(captured?.model, "openai/gpt-4.1-nano");
+    assert.equal(captured?.output.mode, "JSON_SCHEMA");
+    assert.equal("jsonSchema" in (captured?.output ?? {}), true);
     assert.equal(result.record.status, ModelCallStatus.SUCCEEDED);
     assert.equal(result.record.stage, ModelCallStage.ADVOCATES);
     assert.equal(result.record.agentRole, ModelCallAgentRole.DEFENSE_1);
     assert.equal(result.record.attempt, 1);
-    assert.equal(result.record.model, "minimax/minimax-m3:free");
+    assert.equal(result.record.model, "openai/gpt-4.1-nano");
     assert.deepEqual(result.record.validatedResponse, validAdvocate);
     assert.equal(result.record.inputTokens, 100);
     assert.equal(result.record.outputTokens, 40);
@@ -284,7 +284,7 @@ describe("executeRepresentativeAttempt", () => {
           shape: null,
           routing: null,
           content: null,
-          returnedModel: "minimax/minimax-m3:free",
+          returnedModel: "openai/gpt-4.1-nano",
           providerCallId: "gen-choice-error",
           usage: {
             promptTokens: 11,
@@ -329,7 +329,7 @@ describe("executeRepresentativeAttempt", () => {
         assert.equal(result.record.totalCost, "0");
         assert.equal(
           result.returnedModel,
-          "minimax/minimax-m3:free",
+          "openai/gpt-4.1-nano",
         );
       }
     }
@@ -455,8 +455,9 @@ describe("outputStrategyForModel", () => {
       outputStrategyForModel("meta-llama/llama-4-maverick", schema),
       { mode: "JSON_SCHEMA", jsonSchema: schema },
     );
-    assert.deepEqual(outputStrategyForModel("minimax/minimax-m3:free", schema), {
-      mode: "JSON_OBJECT",
+    assert.deepEqual(outputStrategyForModel("openai/gpt-4.1-nano", schema), {
+      mode: "JSON_SCHEMA",
+      jsonSchema: schema,
     });
     assert.deepEqual(
       outputStrategyForModel("openai/gpt-4.1-mini", schema),
