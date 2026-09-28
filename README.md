@@ -8,6 +8,7 @@ The MVP is complete. Production is live on Render (GitHub `main` auto-deploy, Su
 
 - Student: Itamar Shapira
 - Student ID: 208575076
+- Live website: https://tribunal-0hfn.onrender.com/
 
 ## Docs
 
