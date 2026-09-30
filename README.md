@@ -1,3 +1,6 @@
+# Live website
+https://tribunal-0hfn.onrender.com
+
 # AI Tribunal
 
 Next.js modular monolith for dual AI Tribunal analysis of a fixed canonical charge sheet.
